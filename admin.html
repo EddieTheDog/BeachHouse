@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Beach House Admin v2.0</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.37.0/dist/supabase.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.all.min.js"></script>
+    
     <style>
         :root {
             --primary: #0077cc;
@@ -25,7 +26,6 @@
             min-height: 100vh;
         }
 
-        /* --- Sidebar --- */
         nav {
             width: 260px;
             background: var(--primary);
@@ -57,7 +57,6 @@
         .tab:hover { background: var(--primary-dark); }
         .tab.active { background: var(--primary-dark); border-left: 5px solid var(--accent); }
 
-        /* --- Main Content --- */
         main {
             flex-grow: 1;
             padding: 30px;
@@ -69,7 +68,6 @@
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- UI Elements --- */
         .card {
             background: var(--white);
             padding: 25px;
@@ -108,7 +106,6 @@
         button:hover { background: var(--primary-dark); }
         button.secondary { background: #627d98; }
 
-        /* --- Table Styling --- */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -230,55 +227,52 @@
 
 <script>
 /**
- * Beach House Admin - Logic Core
+ * Beach House Admin Logic
  */
-window.addEventListener('DOMContentLoaded', async () => {
-    
-    // 1. Initialize Supabase
+// Use a more robust check for DOM and Library readiness
+const initApp = () => {
+    if (typeof supabase === 'undefined') {
+        console.error("Supabase library not loaded yet. Retrying...");
+        setTimeout(initApp, 100);
+        return;
+    }
+
     const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // 2. Navigation Logic
+    // --- Tab Switching Logic ---
     const tabs = document.querySelectorAll('.tab');
     const contents = document.querySelectorAll('.tab-content');
 
     tabs.forEach(tab => {
-        tab.onclick = () => {
+        tab.addEventListener('click', () => {
             tabs.forEach(t => t.classList.remove('active'));
             contents.forEach(c => c.classList.remove('active'));
             
             tab.classList.add('active');
             const target = document.getElementById(tab.dataset.tab);
-            target.classList.add('active');
-
-            // Data refresh on tab change
-            if(tab.dataset.tab === 'guests') loadGuests();
-            if(tab.dataset.tab === 'work') loadWorkRequests();
-            if(tab.dataset.tab === 'messages') loadMessages();
-        };
+            if(target) {
+                target.classList.add('active');
+                if(tab.dataset.tab === 'guests') loadGuests();
+                if(tab.dataset.tab === 'work') loadWorkRequests();
+                if(tab.dataset.tab === 'messages') loadMessages();
+            }
+        });
     });
 
-    // 3. Guest Management
+    // --- Data Loaders ---
     async function loadGuests() {
-        const { data, error } = await _supabase
-            .from('guests')
-            .select('*')
-            .order('start_date', { ascending: true });
-
+        const { data, error } = await _supabase.from('guests').select('*').order('start_date', { ascending: true });
         if (error) return console.error(error);
-
         const tbody = document.querySelector('#guest-table tbody');
+        if(!tbody) return;
         tbody.innerHTML = data.map(g => `
             <tr>
                 <td><strong>${g.guest_last_name}</strong></td>
                 <td>${g.start_date}</td>
                 <td>${g.end_date}</td>
-                <td>
-                    <span class="badge ${g.checked_in ? 'badge-green' : 'badge-gray'}">
-                        ${g.checked_in ? 'In House' : 'Upcoming'}
-                    </span>
-                </td>
+                <td><span class="badge ${g.checked_in ? 'badge-green' : 'badge-gray'}">${g.checked_in ? 'In House' : 'Upcoming'}</span></td>
                 <td>
                     <button class="btn-sm secondary" onclick="extendGuest(${g.id}, '${g.end_date}')">Extend</button>
                     <button class="btn-sm" style="background:#beccda; color:#333" onclick="cancelGuest(${g.id})">Delete</button>
@@ -287,91 +281,64 @@ window.addEventListener('DOMContentLoaded', async () => {
         `).join('');
     }
 
-    // 4. Work Requests & Messages (Linked Queries)
     async function loadWorkRequests() {
-        const { data, error } = await _supabase
-            .from('work_requests')
-            .select('*, guests(guest_last_name)')
-            .order('created_at', { ascending: false });
-
+        const { data, error } = await _supabase.from('work_requests').select('*, guests(guest_last_name)').order('created_at', { ascending: false });
         const tbody = document.querySelector('#work-table tbody');
-        tbody.innerHTML = data.map(w => `
-            <tr>
-                <td>${w.guests?.guest_last_name || 'Anonymous'}</td>
-                <td>${w.request_text}</td>
-                <td>${new Date(w.created_at).toLocaleDateString()}</td>
-            </tr>
-        `).join('');
+        if(!tbody || error) return;
+        tbody.innerHTML = data.map(w => `<tr><td>${w.guests?.guest_last_name || 'Guest'}</td><td>${w.request_text}</td><td>${new Date(w.created_at).toLocaleDateString()}</td></tr>`).join('');
     }
 
     async function loadMessages() {
-        const { data, error } = await _supabase
-            .from('messages')
-            .select('*, guests(guest_last_name)')
-            .order('created_at', { ascending: false });
-
+        const { data, error } = await _supabase.from('messages').select('*, guests(guest_last_name)').order('created_at', { ascending: false });
         const tbody = document.querySelector('#message-table tbody');
-        tbody.innerHTML = data.map(m => `
-            <tr>
-                <td>${m.guests?.guest_last_name || 'Anonymous'}</td>
-                <td>${m.message_text}</td>
-                <td>${new Date(m.created_at).toLocaleDateString()}</td>
-            </tr>
-        `).join('');
+        if(!tbody || error) return;
+        tbody.innerHTML = data.map(m => `<tr><td>${m.guests?.guest_last_name || 'Guest'}</td><td>${m.message_text}</td><td>${new Date(m.created_at).toLocaleDateString()}</td></tr>`).join('');
     }
 
-    // 5. Global Actions
+    // --- Actions ---
     window.cancelGuest = async (id) => {
-        if(!confirm("Delete this reservation?")) return;
+        if(!confirm("Delete reservation?")) return;
         await _supabase.from('guests').delete().eq('id', id);
         loadGuests();
     };
 
     window.extendGuest = async (id, currentEnd) => {
-        const days = prompt("How many days to add?");
+        const days = prompt("Days to add:");
         if(!days || isNaN(days)) return;
-
         let date = new Date(currentEnd);
         date.setDate(date.getDate() + parseInt(days));
-        const newDateString = date.toISOString().split('T')[0];
-
-        await _supabase.from('guests').update({ end_date: newDateString }).eq('id', id);
+        await _supabase.from('guests').update({ end_date: date.toISOString().split('T')[0] }).eq('id', id);
         loadGuests();
     };
 
-    // 6. Event Handlers
-    document.getElementById('add-guest-btn').onclick = async () => {
-        const ln = document.getElementById('guest-lastname').value;
-        const sd = document.getElementById('start-date').value;
-        const ed = document.getElementById('end-date').value;
-
-        if(!ln || !sd || !ed) return alert("Please fill all fields");
-
-        await _supabase.from('guests').insert([{ 
-            guest_last_name: ln, 
-            start_date: sd, 
-            end_date: ed, 
-            checked_in: false 
-        }]);
-
-        loadGuests();
-        // Clear inputs
-        ['guest-lastname', 'start-date', 'end-date'].forEach(id => document.getElementById(id).value = "");
-    };
+    const addBtn = document.getElementById('add-guest-btn');
+    if(addBtn) {
+        addBtn.onclick = async () => {
+            const ln = document.getElementById('guest-lastname').value;
+            const sd = document.getElementById('start-date').value;
+            const ed = document.getElementById('end-date').value;
+            if(!ln || !sd || !ed) return alert("Fill all fields");
+            await _supabase.from('guests').insert([{ guest_last_name: ln, start_date: sd, end_date: ed, checked_in: false }]);
+            loadGuests();
+            ['guest-lastname', 'start-date', 'end-date'].forEach(id => document.getElementById(id).value = "");
+        };
+    }
 
     document.getElementById('lock-btn').onclick = async () => {
         await _supabase.from('controls').update({ tablet_locked: true }).eq('id', 1);
-        alert("Tablet is now LOCKED");
+        alert("Locked");
     };
-
+    
     document.getElementById('unlock-btn').onclick = async () => {
         await _supabase.from('controls').update({ tablet_locked: false }).eq('id', 1);
-        alert("Tablet is now UNLOCKED");
+        alert("Unlocked");
     };
 
-    // Initial Load
     loadGuests();
-});
+};
+
+// Fire on load
+window.addEventListener('load', initApp);
 </script>
 </body>
 </html>
