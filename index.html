@@ -3,157 +3,126 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Guest Dashboard v2.7</title>
+<title>Beach House Guest Dashboard v2.8</title>
 <style>
-html,body{height:100%;margin:0;padding:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#0072ff,#00c6ff);color:#fff;display:flex;justify-content:center;align-items:center;}
-.container{width:100%;max-width:600px;padding:20px;text-align:center;}
+html,body{height:100%;margin:0;padding:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#0072ff,#00c6ff);color:#fff;}
+.container{width:95%;max-width:600px;margin:auto;padding:20px;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;}
+h1,h2{text-align:center;text-shadow:1px 1px 5px rgba(0,0,0,0.3);}
 button,input,textarea{padding:10px;margin:5px;border-radius:10px;border:none;}
-button{cursor:pointer;font-weight:bold;}
-.modal-bg{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);justify-content:center;align-items:center;z-index:10;}
-.modal{background:#fff;color:#000;padding:20px;border-radius:15px;width:90%;max-width:400px;display:flex;flex-direction:column;}
+button{cursor:pointer;font-weight:bold;background:#005dbf;color:#fff;transition:.3s;width:100%;}
+button:hover{background:#003f7f;}
+#messages{width:100%;max-height:300px;overflow-y:auto;margin-top:10px;background:rgba(0,0,0,0.2);border-radius:10px;padding:10px;}
+.message{background:rgba(255,255,255,0.2);margin:5px 0;padding:8px;border-radius:10px;word-wrap:break-word;}
+.message.admin{background:rgba(0,0,0,0.3);}
+#workRequests{margin-top:10px;width:100%;}
+#dates{margin-top:10px;width:100%;text-align:center;font-weight:bold;}
+#popupOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:none;justify-content:center;align-items:center;}
+#popup{background:#00c6ff;color:#000;padding:20px;border-radius:15px;width:80%;max-width:400px;display:flex;flex-direction:column;}
+#popup input, #popup textarea{width:100%;margin-bottom:10px;}
 </style>
 </head>
 <body>
 <div class="container">
-<h1>Beach House Dashboard v2.7</h1>
-<div id="welcome"></div>
+<h1>Welcome to the Beach House</h1>
+<p id="welcomeMessage"></p>
+<div id="dates"></div>
+<div id="messages"></div>
 
-<div id="mainContent" style="display:none;">
-<h3>Work Requests</h3>
-<textarea id="workRequestText" placeholder="Describe your request"></textarea><br>
-<button id="submitWorkRequest">Submit Work Request</button>
-<ul id="workRequestsList"></ul>
-
-<h3>Messages</h3>
-<textarea id="guestMessageText" placeholder="Message host"></textarea><br>
-<button id="submitGuestMessage">Send Message</button>
-<ul id="messagesList"></ul>
-
-<div id="checkoutDiv" style="margin-top:20px;">
-<button id="checkoutBtn" style="display:none;">I’m Leaving</button>
+<div id="workRequests">
+<button id="submitRequestBtn">Submit Work Request</button>
 </div>
 
-<p id="status"></p>
+<button id="checkoutBtn">I'm Leaving</button>
+</div>
+
+<!-- Popup for Work Request -->
+<div id="popupOverlay">
+<div id="popup">
+<h3>Submit Work Request</h3>
+<textarea id="requestText" placeholder="Describe your request..."></textarea>
+<button id="sendRequestBtn">Send Request</button>
+<button id="cancelPopupBtn">Cancel</button>
 </div>
 </div>
 
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
 const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = createClient(SUPABASE_URL,SUPABASE_KEY);
 
-let guest = null;
+let guest=null; // current guest
+const messagesDiv = document.getElementById('messages');
+const welcomeMessage = document.getElementById('welcomeMessage');
+const datesDiv = document.getElementById('dates');
 
-// Initialize guest session
-async function initGuest(){
+// Get today's guest
+async function loadGuest(){
   const today = new Date().toISOString().slice(0,10);
-  const { data, error } = await supabase.from('guests').select('*').eq('active',true).lte('start_date',today).gte('end_date',today);
-  if(error){console.error(error);return;}
-  if(data.length===0){document.getElementById('welcome').innerText="No scheduled guests today";return;}
-  guest = data[0];
-
-  if(!guest.verification_date){
-    showWelcomeModal();
-  } else {
-    document.getElementById('mainContent').style.display='block';
-    loadWorkRequests();
-    loadMessages();
-    checkCheckoutButton();
+  const { data } = await supabase.from('guests').select('*').gte('start_date',today).lte('end_date',today).order('start_date',{ascending:true});
+  if(data.length===0){
+    welcomeMessage.innerText="No scheduled guests today.";
+    return;
   }
-}
-initGuest();
-
-// Welcome modal
-function showWelcomeModal(){
-  const modalBg = document.createElement('div'); modalBg.className='modal-bg';
-  const modal = document.createElement('div'); modal.className='modal';
-  modal.innerHTML = `<h2>Welcome ${guest.guest_last_name}${guest.guest_last_name.endsWith('s')?'':'s'}</h2>
-  <p>Is this you?</p>
-  <button id="yesBtn">Yes</button>
-  <button id="noBtn">No</button>`;
-  modalBg.appendChild(modal); document.body.appendChild(modalBg);
-  modalBg.style.display='flex';
-  document.getElementById('yesBtn').onclick = async ()=>{
-    await supabase.from('guests').update({verification_status:'verified',verification_date:new Date().toISOString()}).eq('id',guest.id);
-    document.body.removeChild(modalBg);
-    document.getElementById('mainContent').style.display='block';
-    loadWorkRequests(); loadMessages(); checkCheckoutButton();
-  }
-  document.getElementById('noBtn').onclick = ()=>{
-    alert("Please contact host to unlock"); modalBg.style.display='none';
-  }
-}
-
-// Work requests
-const submitWorkRequest = document.getElementById('submitWorkRequest');
-const workRequestText = document.getElementById('workRequestText');
-const workRequestsList = document.getElementById('workRequestsList');
-
-submitWorkRequest.onclick = async ()=>{
-  if(!workRequestText.value.trim()){return;}
-  await supabase.from('work_requests').insert([{guest_id:guest.id,request_text:workRequestText.value.trim(),date:new Date().toISOString()}]);
-  workRequestText.value='';
-  loadWorkRequests();
-}
-
-async function loadWorkRequests(){
-  const { data } = await supabase.from('work_requests').select('*').eq('guest_id',guest.id).order('date',{ascending:true});
-  workRequestsList.innerHTML='';
-  data.forEach(r=>{const li=document.createElement('li'); li.textContent=`${r.request_text} (${new Date(r.date).toLocaleString()})`; workRequestsList.appendChild(li);});
-}
-
-// Messages
-const submitGuestMessage = document.getElementById('submitGuestMessage');
-const guestMessageText = document.getElementById('guestMessageText');
-const messagesList = document.getElementById('messagesList');
-
-submitGuestMessage.onclick = async ()=>{
-  if(!guestMessageText.value.trim()) return;
-  await supabase.from('messages').insert([{guest_id:guest.id,message_text:guestMessageText.value.trim(),date:new Date().toISOString()}]);
-  guestMessageText.value='';
+  guest = data[0]; // take first guest
+  const start = new Date(guest.start_date);
+  const end = new Date(guest.end_date);
+  const daysLeft = Math.ceil((end-new Date())/(1000*60*60*24))+1;
+  welcomeMessage.innerText=`Welcome ${guest.guest_last_name}${daysLeft>1?'s':''}!`;
+  datesDiv.innerText=`Stay: ${guest.start_date} → ${guest.end_date} (${daysLeft} day${daysLeft>1?'s':''} left)`;
   loadMessages();
 }
+loadGuest();
 
+// Load messages
 async function loadMessages(){
+  if(!guest) return;
   const { data } = await supabase.from('messages').select('*').eq('guest_id',guest.id).order('date',{ascending:true});
-  messagesList.innerHTML='';
-  data.forEach(m=>{const li=document.createElement('li'); li.textContent=`${m.message_text} (${new Date(m.date).toLocaleString()})`; messagesList.appendChild(li);});
+  messagesDiv.innerHTML='';
+  data.forEach(m=>{
+    const div=document.createElement('div');
+    div.className='message admin';
+    div.innerText=m.message_text;
+    messagesDiv.appendChild(div);
+  });
+}
+
+// Work Request popup
+const popupOverlay=document.getElementById('popupOverlay');
+document.getElementById('submitRequestBtn').onclick=()=>{popupOverlay.style.display='flex';}
+document.getElementById('cancelPopupBtn').onclick=()=>{popupOverlay.style.display='none';}
+document.getElementById('sendRequestBtn').onclick=async()=>{
+  const text=document.getElementById('requestText').value.trim();
+  if(!text){alert("Enter a request"); return;}
+  await supabase.from('work_requests').insert([{guest_id:guest.id,request_text:text}]);
+  document.getElementById('requestText').value='';
+  popupOverlay.style.display='none';
+  alert("Work request sent!");
 }
 
 // Checkout
-function checkCheckoutButton(){
-  const today = new Date().toISOString().slice(0,10);
-  if(today===guest.end_date){
-    document.getElementById('checkoutBtn').style.display='inline-block';
-  }
-}
-
-document.getElementById('checkoutBtn').onclick = async ()=>{
-  await checkoutGuest();
-}
-
-async function checkoutGuest(){
+document.getElementById('checkoutBtn').onclick=async()=>{
+  if(!confirm("Are you leaving? This will check you out.")) return;
   await supabase.from('guests').update({active:false}).eq('id',guest.id);
   await supabase.from('work_requests').delete().eq('guest_id',guest.id);
   await supabase.from('messages').delete().eq('guest_id',guest.id);
-  alert("You are checked out. Goodbye!");
+  alert("Checked out. Thank you!");
   location.reload();
 }
 
-// Automatic checkout at midnight
-setInterval(async ()=>{
-  const now = new Date();
-  if(now.getHours()===0 && now.getMinutes()===0){
-    if(guest){
-      const today = now.toISOString().slice(0,10);
-      if(today > guest.end_date){
-        await checkoutGuest();
-      }
-    }
+// Auto cleanup at midnight
+setInterval(async()=>{
+  const today=new Date().toISOString().slice(0,10);
+  if(!guest) return;
+  if(today>guest.end_date){
+    await supabase.from('guests').update({active:false}).eq('id',guest.id);
+    await supabase.from('work_requests').delete().eq('guest_id',guest.id);
+    await supabase.from('messages').delete().eq('guest_id',guest.id);
+    alert("Your stay is over. Checked out automatically.");
+    location.reload();
   }
 },60000);
+
 </script>
 </body>
 </html>
