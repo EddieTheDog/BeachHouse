@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Admin Dashboard v2.4</title>
+<title>Beach House Admin Dashboard v2.5</title>
 <style>
 html,body {height:100%;margin:0;padding:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#0072ff,#00c6ff);color:#fff;overflow-x:hidden;}
 .container {max-width:1000px;margin:0 auto;padding:20px;}
@@ -17,13 +17,13 @@ button:hover {opacity:0.8;}
 .tab.active {background:#fff;color:#0072ff;}
 .modal-bg {display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);justify-content:center;align-items:center;z-index:10;}
 .modal {background:#fff;color:#000;padding:20px;border-radius:15px;max-width:400px;width:90%;display:flex;flex-direction:column;}
-.modal input {width:100%;padding:10px;margin:5px 0;border-radius:10px;border:1px solid #ccc;}
+.modal input, .modal textarea {width:100%;padding:10px;margin:5px 0;border-radius:10px;border:1px solid #ccc;}
 .modal button {margin-top:10px;}
 </style>
 </head>
 <body>
 <div class="container">
-<h1>Beach House Admin Dashboard v2.4</h1>
+<h1>Beach House Admin Dashboard v2.5</h1>
 
 <div class="tabs">
   <div class="tab active" id="guestsTab">Guest Management</div>
@@ -33,6 +33,13 @@ button:hover {opacity:0.8;}
 
 <!-- Guest Management -->
 <div id="guestsSection">
+<h2>Schedule a Guest</h2>
+<input type="text" id="newGuestName" placeholder="Guest Last Name">
+<input type="date" id="newGuestStart">
+<input type="date" id="newGuestEnd">
+<button id="addGuestBtn">Add Guest</button>
+<p id="addGuestFeedback"></p>
+
 <h2>Current Guests</h2>
 <table id="guestsTable">
   <thead>
@@ -53,7 +60,7 @@ button:hover {opacity:0.8;}
 <!-- Controls -->
 <div id="controlsSection" style="display:none;text-align:center;">
 <h2>Technical Controls</h2>
-<p>Lock or unlock guest tablets and force verification modals.</p>
+<p>Lock/unlock guest tablets or force verification modal</p>
 <table id="controlsTable">
 <thead><tr><th>Guest</th><th>Verification Status</th><th>Actions</th></tr></thead>
 <tbody></tbody>
@@ -118,7 +125,7 @@ function switchTab(tab){
 // --- Load Guests ---
 async function loadGuests(){
   const today = new Date().toISOString().slice(0,10);
-  const { data, error } = await supabase.from('guests').select('*').eq('active',true).order('start_date', {ascending:true});
+  const { data, error } = await supabase.from('guests').select('*').eq('active',true).order('start_date',{ascending:true});
   if(error){console.error(error); return;}
   guests = data;
   renderGuests();
@@ -126,6 +133,7 @@ async function loadGuests(){
   renderMessages();
 }
 
+// --- Render Guests ---
 function renderGuests(){
   const tbody = document.querySelector('#guestsTable tbody');
   tbody.innerHTML='';
@@ -148,6 +156,37 @@ function renderGuests(){
     `;
     tbody.appendChild(tr);
   });
+}
+
+// --- Add Guest ---
+const addGuestBtn = document.getElementById('addGuestBtn');
+const newGuestName = document.getElementById('newGuestName');
+const newGuestStart = document.getElementById('newGuestStart');
+const newGuestEnd = document.getElementById('newGuestEnd');
+const addGuestFeedback = document.getElementById('addGuestFeedback');
+
+addGuestBtn.onclick = async ()=>{
+  const name = newGuestName.value.trim();
+  const start = newGuestStart.value;
+  const end = newGuestEnd.value;
+  if(!name || !start || !end){ addGuestFeedback.textContent='Fill all fields'; return; }
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  if(endDate < startDate){ addGuestFeedback.textContent='End date must be after start'; return; }
+
+  // Conflict check
+  const conflict = guests.some(g=>{
+    const gStart = new Date(g.start_date);
+    const gEnd = new Date(g.end_date);
+    return (startDate <= gEnd && endDate >= gStart);
+  });
+  if(conflict){ addGuestFeedback.textContent='Conflict with another guest'; return; }
+
+  const { error } = await supabase.from('guests').insert([{guest_last_name:name,start_date:start,end_date:end}]);
+  if(error){ addGuestFeedback.textContent='Error adding guest'; console.error(error); return;}
+  addGuestFeedback.textContent='Guest added!';
+  newGuestName.value=''; newGuestStart.value=''; newGuestEnd.value='';
+  loadGuests();
 }
 
 // --- Extend Stay ---
@@ -225,7 +264,7 @@ window.unlockGuest = async function(guestId){
 }
 
 window.forceVerify = async function(guestId){
-  await supabase.from('guests').update({verification_status:'pending', verification_date:null}).eq('id',guestId);
+  await supabase.from('guests').update({verification_status:'pending',verification_date:null}).eq('id',guestId);
   loadGuests();
 }
 
@@ -233,7 +272,7 @@ window.forceVerify = async function(guestId){
 async function renderMessages(){
   const tbody = document.querySelector('#messagesTable tbody');
   tbody.innerHTML='';
-  const { data, error } = await supabase.from('messages').select('*,guest_id(guest_last_name)').order('date', {ascending:true});
+  const { data, error } = await supabase.from('messages').select('*,guest_id(guest_last_name)').order('date',{ascending:true});
   if(error){console.error(error); return;}
   data.forEach(m=>{
     const tr = document.createElement('tr');
