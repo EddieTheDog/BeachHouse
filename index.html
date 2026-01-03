@@ -3,12 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Dashboard v1.1</title>
+<title>Beach House Dashboard v1.2</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <style>
   body { font-family: system-ui, sans-serif; background: #e0f7fa; display: flex; flex-direction: column; align-items: center; padding: 20px; min-height: 100vh; }
   h1 { margin-bottom: 15px; }
-  .weather { margin-bottom: 20px; font-size: 1.2rem; }
   form { display: flex; flex-direction: column; gap: 10px; width: 320px; }
   input, textarea, button { padding: 10px; font-size: 1rem; width: 100%; border-radius: 5px; border: 1px solid #ccc; }
   button { cursor: pointer; background: #0077cc; color: white; border: none; transition: background 0.3s; }
@@ -19,8 +18,7 @@
 </head>
 <body>
 
-<h1>Beach House Dashboard v1.1</h1>
-<div class="weather" id="weather">Loading weather...</div>
+<h1>Beach House Dashboard v1.2</h1>
 
 <form id="requestForm">
   <input type="text" id="name" placeholder="Your Name" required>
@@ -30,14 +28,14 @@
 </form>
 
 <div id="confirmation"></div>
-<footer>Version 1.1</footer>
+<footer>Version 1.2</footer>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   // =================== SUPABASE SETUP ===================
   const supabaseUrl = 'https://ofnlpqfscyecatetnuqi.supabase.co';
   const supabaseKey = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+  const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
   // =================== FORM SUBMISSION ===================
   const form = document.getElementById('requestForm');
@@ -50,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const requestText = document.getElementById('request').value;
 
     try {
-      await supabase.from('work_requests').insert([{ name, room, request: requestText, status: 'Pending' }]);
+      await supabaseClient.from('work_requests').insert([{ name, room, request: requestText, status: 'Pending' }]);
       confirmation.innerText = "✅ Request submitted!";
       form.reset();
     } catch (err) {
@@ -58,24 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
       confirmation.innerText = "❌ Error submitting request";
     }
   });
-
-  // =================== WEATHER ===================
-  const weatherEl = document.getElementById('weather');
-  const apiKey = 'YOUR_OPENWEATHERMAP_API_KEY'; // Replace with your free key
-  const location = 'Orange County, US';
-
-  async function getWeather() {
-    try {
-      const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location)}&units=imperial&appid=${apiKey}`);
-      const data = await res.json();
-      weatherEl.innerText = `Weather: ${data.main.temp}°F, ${data.weather[0].description}`;
-    } catch (err) {
-      console.error(err);
-      weatherEl.innerText = 'Weather unavailable';
-    }
-  }
-
-  getWeather();
 });
 </script>
 
