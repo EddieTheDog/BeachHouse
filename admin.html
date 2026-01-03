@@ -3,87 +3,43 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Admin Dashboard v2.5</title>
+<title>Beach House Admin Dashboard v2.7</title>
 <style>
-html,body {height:100%;margin:0;padding:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#0072ff,#00c6ff);color:#fff;overflow-x:hidden;}
-.container {max-width:1000px;margin:0 auto;padding:20px;}
-h1,h2,h3 {text-align:center;margin-bottom:20px;}
-table {width:100%;border-collapse:collapse;margin-bottom:20px;}
-th,td {padding:10px;border:1px solid #fff;text-align:center;}
-button {cursor:pointer;padding:5px 10px;border-radius:10px;border:none;margin:2px;font-weight:bold;transition:0.2s;}
-button:hover {opacity:0.8;}
-.tabs {display:flex;justify-content:center;margin-bottom:20px;}
-.tab {padding:10px 20px;background:rgba(255,255,255,0.2);margin:0 5px;border-radius:10px;cursor:pointer;}
-.tab.active {background:#fff;color:#0072ff;}
-.modal-bg {display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);justify-content:center;align-items:center;z-index:10;}
-.modal {background:#fff;color:#000;padding:20px;border-radius:15px;max-width:400px;width:90%;display:flex;flex-direction:column;}
-.modal input, .modal textarea {width:100%;padding:10px;margin:5px 0;border-radius:10px;border:1px solid #ccc;}
-.modal button {margin-top:10px;}
+html,body{height:100%;margin:0;padding:0;font-family:Arial,sans-serif;background:#222;color:#fff;display:flex;justify-content:center;align-items:flex-start;}
+.container{width:95%;max-width:1000px;padding:20px;}
+button,input,textarea{padding:8px;margin:5px;border-radius:10px;border:none;}
+button{cursor:pointer;font-weight:bold;}
+table{width:100%;border-collapse:collapse;margin-top:10px;}
+th,td{padding:10px;border:1px solid #444;text-align:center;}
+h2,h3{margin-top:20px;}
 </style>
 </head>
 <body>
 <div class="container">
-<h1>Beach House Admin Dashboard v2.5</h1>
+<h1>Beach House Admin Dashboard v2.7</h1>
 
-<div class="tabs">
-  <div class="tab active" id="guestsTab">Guest Management</div>
-  <div class="tab" id="controlsTab">Controls</div>
-  <div class="tab" id="messagesTab">Messages</div>
-</div>
-
-<!-- Guest Management -->
-<div id="guestsSection">
-<h2>Schedule a Guest</h2>
-<input type="text" id="newGuestName" placeholder="Guest Last Name">
-<input type="date" id="newGuestStart">
-<input type="date" id="newGuestEnd">
+<h2>Schedule Guest</h2>
+<input type="text" id="guestLastName" placeholder="Guest Last Name">
+<input type="date" id="startDate">
+<input type="date" id="endDate">
 <button id="addGuestBtn">Add Guest</button>
-<p id="addGuestFeedback"></p>
+<p id="guestStatus"></p>
 
 <h2>Current Guests</h2>
 <table id="guestsTable">
-  <thead>
-    <tr>
-      <th>Last Name</th>
-      <th>Start</th>
-      <th>End</th>
-      <th>Checked In</th>
-      <th>Verification</th>
-      <th>Days Left</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
+<tr>
+<th>Last Name</th><th>Start</th><th>End</th><th>Days Left</th><th>Actions</th>
+</tr>
 </table>
-</div>
 
-<!-- Controls -->
-<div id="controlsSection" style="display:none;text-align:center;">
-<h2>Technical Controls</h2>
-<p>Lock/unlock guest tablets or force verification modal</p>
-<table id="controlsTable">
-<thead><tr><th>Guest</th><th>Verification Status</th><th>Actions</th></tr></thead>
-<tbody></tbody>
-</table>
-</div>
+<h2>Work Requests</h2>
+<ul id="workRequestsList"></ul>
 
-<!-- Messages -->
-<div id="messagesSection" style="display:none;">
 <h2>Guest Messages</h2>
-<table id="messagesTable">
-<thead><tr><th>Guest</th><th>Message</th><th>Date</th></tr></thead>
-<tbody></tbody>
-</table>
-</div>
+<ul id="messagesList"></ul>
 
-<!-- Extend Stay Modal -->
-<div class="modal-bg" id="extendModal">
-  <div class="modal">
-    <h3>Extend Stay</h3>
-    <input type="number" id="extraDays" placeholder="Number of days to extend">
-    <button id="confirmExtend">Confirm</button>
-    <button id="closeExtend">Cancel</button>
-  </div>
+<h2>Controls</h2>
+<button id="forceVerificationBtn">Force Verification Modal</button>
 </div>
 
 <script type="module">
@@ -93,195 +49,135 @@ const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let guests = [];
-let selectedGuest = null;
+const guestTable = document.getElementById('guestsTable');
+const workRequestsList = document.getElementById('workRequestsList');
+const messagesList = document.getElementById('messagesList');
 
-// --- Tabs ---
-const guestsTab = document.getElementById('guestsTab');
-const controlsTab = document.getElementById('controlsTab');
-const messagesTab = document.getElementById('messagesTab');
-
-const guestsSection = document.getElementById('guestsSection');
-const controlsSection = document.getElementById('controlsSection');
-const messagesSection = document.getElementById('messagesSection');
-
-guestsTab.onclick = ()=>{switchTab('guests');};
-controlsTab.onclick = ()=>{switchTab('controls');};
-messagesTab.onclick = ()=>{switchTab('messages');};
-
-function switchTab(tab){
-  guestsSection.style.display='none';
-  controlsSection.style.display='none';
-  messagesSection.style.display='none';
-  guestsTab.classList.remove('active');
-  controlsTab.classList.remove('active');
-  messagesTab.classList.remove('active');
-
-  if(tab==='guests'){ guestsSection.style.display='block'; guestsTab.classList.add('active'); }
-  if(tab==='controls'){ controlsSection.style.display='block'; controlsTab.classList.add('active'); }
-  if(tab==='messages'){ messagesSection.style.display='block'; messagesTab.classList.add('active'); }
-}
-
-// --- Load Guests ---
 async function loadGuests(){
-  const today = new Date().toISOString().slice(0,10);
-  const { data, error } = await supabase.from('guests').select('*').eq('active',true).order('start_date',{ascending:true});
-  if(error){console.error(error); return;}
-  guests = data;
-  renderGuests();
-  renderControls();
-  renderMessages();
-}
-
-// --- Render Guests ---
-function renderGuests(){
-  const tbody = document.querySelector('#guestsTable tbody');
-  tbody.innerHTML='';
-  guests.forEach(g=>{
-    const tr = document.createElement('tr');
-    const end = new Date(g.end_date);
-    const now = new Date();
-    const diff = Math.ceil((end-now)/(1000*60*60*24)) + 1;
-    tr.innerHTML = `
+  const { data } = await supabase.from('guests').select('*').order('start_date',{ascending:true});
+  guestTable.innerHTML=`<tr><th>Last Name</th><th>Start</th><th>End</th><th>Days Left</th><th>Actions</th></tr>`;
+  const today = new Date();
+  data.forEach(g=>{
+    const start = new Date(g.start_date); const end = new Date(g.end_date);
+    const daysLeft = Math.max(0,Math.ceil((end-today)/(1000*60*60*24))+1);
+    const row = document.createElement('tr');
+    row.innerHTML=`
       <td>${g.guest_last_name}</td>
       <td>${g.start_date}</td>
       <td>${g.end_date}</td>
-      <td>${g.checked_in_dates?.length || 0}</td>
-      <td>${g.verification_status}</td>
-      <td>${diff>0?diff:'0'}</td>
+      <td>${daysLeft}</td>
       <td>
-        <button onclick="openExtend(${g.id})">Extend</button>
+        <button onclick="extendGuest(${g.id})">Extend</button>
+        <button onclick="shortenGuest(${g.id})">Shorten</button>
         <button onclick="cancelGuest(${g.id})">Cancel</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-// --- Add Guest ---
-const addGuestBtn = document.getElementById('addGuestBtn');
-const newGuestName = document.getElementById('newGuestName');
-const newGuestStart = document.getElementById('newGuestStart');
-const newGuestEnd = document.getElementById('newGuestEnd');
-const addGuestFeedback = document.getElementById('addGuestFeedback');
-
-addGuestBtn.onclick = async ()=>{
-  const name = newGuestName.value.trim();
-  const start = newGuestStart.value;
-  const end = newGuestEnd.value;
-  if(!name || !start || !end){ addGuestFeedback.textContent='Fill all fields'; return; }
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  if(endDate < startDate){ addGuestFeedback.textContent='End date must be after start'; return; }
-
-  // Conflict check
-  const conflict = guests.some(g=>{
-    const gStart = new Date(g.start_date);
-    const gEnd = new Date(g.end_date);
-    return (startDate <= gEnd && endDate >= gStart);
-  });
-  if(conflict){ addGuestFeedback.textContent='Conflict with another guest'; return; }
-
-  const { error } = await supabase.from('guests').insert([{guest_last_name:name,start_date:start,end_date:end}]);
-  if(error){ addGuestFeedback.textContent='Error adding guest'; console.error(error); return;}
-  addGuestFeedback.textContent='Guest added!';
-  newGuestName.value=''; newGuestStart.value=''; newGuestEnd.value='';
-  loadGuests();
-}
-
-// --- Extend Stay ---
-const extendModal = document.getElementById('extendModal');
-const extraDaysInput = document.getElementById('extraDays');
-const confirmExtend = document.getElementById('confirmExtend');
-const closeExtend = document.getElementById('closeExtend');
-
-window.openExtend = function(guestId){
-  selectedGuest = guests.find(g=>g.id===guestId);
-  extraDaysInput.value='';
-  extendModal.style.display='flex';
-}
-
-closeExtend.onclick = ()=>{extendModal.style.display='none'; selectedGuest=null;}
-
-confirmExtend.onclick = async ()=>{
-  const extra = parseInt(extraDaysInput.value);
-  if(!extra || extra<1){ alert('Enter valid days'); return; }
-
-  const newEnd = new Date(selectedGuest.end_date);
-  newEnd.setDate(newEnd.getDate()+extra);
-
-  // Conflict check
-  const conflict = guests.some(g=>{
-    if(g.id===selectedGuest.id) return false;
-    const gStart = new Date(g.start_date);
-    return newEnd >= gStart && new Date(selectedGuest.start_date) <= new Date(g.end_date);
-  });
-
-  if(conflict){ alert('Cannot extend: another guest scheduled'); return; }
-
-  await supabase.from('guests').update({end_date:newEnd.toISOString().slice(0,10)}).eq('id',selectedGuest.id);
-  extendModal.style.display='none';
-  selectedGuest=null;
-  loadGuests();
-}
-
-// --- Cancel Guest ---
-window.cancelGuest = async function(guestId){
-  if(!confirm('Are you sure you want to cancel this guest?')) return;
-  await supabase.from('messages').delete().eq('guest_id',guestId);
-  await supabase.from('work_requests').delete().eq('guest_id',guestId);
-  await supabase.from('guests').delete().eq('id',guestId);
-  loadGuests();
-}
-
-// --- Controls Tab ---
-function renderControls(){
-  const tbody = document.querySelector('#controlsTable tbody');
-  tbody.innerHTML='';
-  guests.forEach(g=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${g.guest_last_name}</td>
-      <td>${g.verification_status}</td>
-      <td>
-        <button onclick="lockGuest(${g.id})">Lock</button>
         <button onclick="unlockGuest(${g.id})">Unlock</button>
-        <button onclick="forceVerify(${g.id})">Force Verify</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
+      </td>`;
+    guestTable.appendChild(row);
   });
 }
-
-window.lockGuest = async function(guestId){
-  await supabase.from('guests').update({verification_status:'locked'}).eq('id',guestId);
-  loadGuests();
-}
-
-window.unlockGuest = async function(guestId){
-  await supabase.from('guests').update({verification_status:'pending'}).eq('id',guestId);
-  loadGuests();
-}
-
-window.forceVerify = async function(guestId){
-  await supabase.from('guests').update({verification_status:'pending',verification_date:null}).eq('id',guestId);
-  loadGuests();
-}
-
-// --- Messages Tab ---
-async function renderMessages(){
-  const tbody = document.querySelector('#messagesTable tbody');
-  tbody.innerHTML='';
-  const { data, error } = await supabase.from('messages').select('*,guest_id(guest_last_name)').order('date',{ascending:true});
-  if(error){console.error(error); return;}
-  data.forEach(m=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${m.guest_id.guest_last_name}</td><td>${m.message_text}</td><td>${new Date(m.date).toLocaleString()}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-
 loadGuests();
+
+// Add guest
+document.getElementById('addGuestBtn').onclick = async ()=>{
+  const lastName = document.getElementById('guestLastName').value.trim();
+  const start = document.getElementById('startDate').value;
+  const end = document.getElementById('endDate').value;
+  if(!lastName||!start||!end){document.getElementById('guestStatus').innerText="Please fill all fields"; return;}
+  const { data,error } = await supabase.from('guests').insert([{guest_last_name:lastName,start_date:start,end_date:end,active:true}]);
+  if(error){console.error(error);document.getElementById('guestStatus').innerText="Error adding guest"; return;}
+  document.getElementById('guestStatus').innerText="Guest added!";
+  loadGuests();
+}
+
+// Extend guest
+window.extendGuest = async (id)=>{
+  const days = parseInt(prompt("Enter number of days to extend:"));
+  if(isNaN(days)||days<=0) return;
+  const { data:guest } = await supabase.from('guests').select('*').eq('id',id).single();
+  const newEnd = new Date(guest.end_date); newEnd.setDate(newEnd.getDate()+days);
+  await supabase.from('guests').update({end_date:newEnd.toISOString().slice(0,10)}).eq('id',id);
+  loadGuests();
+}
+
+// Shorten guest
+window.shortenGuest = async (id)=>{
+  const days = parseInt(prompt("Enter number of days to shorten:"));
+  if(isNaN(days)||days<=0) return;
+  const { data:guest } = await supabase.from('guests').select('*').eq('id',id).single();
+  const newEnd = new Date(guest.end_date); newEnd.setDate(newEnd.getDate()-days);
+  await supabase.from('guests').update({end_date:newEnd.toISOString().slice(0,10)}).eq('id',id);
+  loadGuests();
+}
+
+// Cancel guest
+window.cancelGuest = async (id)=>{
+  if(!confirm("Cancel guest? This will delete all their messages and work requests.")) return;
+  await supabase.from('guests').delete().eq('id',id);
+  await supabase.from('work_requests').delete().eq('guest_id',id);
+  await supabase.from('messages').delete().eq('guest_id',id);
+  loadGuests(); loadMessages(); loadWorkRequests();
+}
+
+// Unlock guest (force verification)
+window.unlockGuest = async (id)=>{
+  await supabase.from('guests').update({verification_status:'pending',verification_date:null}).eq('id',id);
+  alert("Guest will be prompted to verify on their tablet.");
+}
+
+// Force all verification modals
+document.getElementById('forceVerificationBtn').onclick = async ()=>{
+  const { data } = await supabase.from('guests').select('*').eq('active',true);
+  for(const g of data){
+    await supabase.from('guests').update({verification_status:'pending',verification_date:null}).eq('id',g.id);
+  }
+  alert("All active guests will be prompted to verify on their tablets.");
+}
+
+// Load work requests
+async function loadWorkRequests(){
+  const { data } = await supabase.from('work_requests').select('*,guest_id(guest_last_name)').order('date',{ascending:true});
+  workRequestsList.innerHTML='';
+  data.forEach(r=>{
+    const li = document.createElement('li');
+    li.textContent=`${r.guest_id.guest_last_name}: ${r.request_text} (${new Date(r.date).toLocaleString()})`;
+    workRequestsList.appendChild(li);
+  });
+}
+loadWorkRequests();
+
+// Load messages
+async function loadMessages(){
+  const { data } = await supabase.from('messages').select('*,guest_id(guest_last_name)').order('date',{ascending:true});
+  messagesList.innerHTML='';
+  data.forEach(m=>{
+    const li = document.createElement('li');
+    li.textContent=`${m.guest_id.guest_last_name}: ${m.message_text} (${new Date(m.date).toLocaleString()})`;
+    const replyBtn = document.createElement('button'); replyBtn.textContent='Reply';
+    replyBtn.onclick = async ()=>{
+      const reply = prompt("Enter message for guest:");
+      if(reply) await supabase.from('messages').insert([{guest_id:m.guest_id.id,message_text:reply,date:new Date().toISOString()}]);
+      loadMessages();
+    }
+    li.appendChild(replyBtn);
+    messagesList.appendChild(li);
+  });
+}
+
+// Automatic cleanup
+setInterval(async ()=>{
+  const today = new Date().toISOString().slice(0,10);
+  // Checkout finished guests
+  const { data } = await supabase.from('guests').select('*').eq('active',true);
+  for(const g of data){
+    if(today>g.end_date){
+      await supabase.from('guests').update({active:false}).eq('id',g.id);
+      await supabase.from('work_requests').delete().eq('guest_id',g.id);
+      await supabase.from('messages').delete().eq('guest_id',g.id);
+    }
+  }
+  loadGuests(); loadMessages(); loadWorkRequests();
+},60000);
+
 </script>
 </body>
 </html>
