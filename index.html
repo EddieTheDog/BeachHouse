@@ -5,101 +5,59 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Beach House Guest Dashboard v1.6</title>
 <style>
-  body {
-    font-family: 'Arial', sans-serif;
-    margin: 0;
-    padding: 0;
-    background: linear-gradient(135deg, #00c6ff, #0072ff);
-    color: #fff;
-  }
-  .container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 20px;
-  }
-  h1 { text-align: center; margin-bottom: 10px; }
-  #welcomeScreen, #dashboard { display: none; }
-  button {
-    padding: 15px 30px;
-    margin: 10px;
-    font-size: 1.2rem;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: 0.2s;
-  }
-  button:hover { opacity: 0.8; }
-  .yes { background-color: #00ff6a; color: #000; }
-  .no { background-color: #ff4d4d; color: #000; }
-  .checkin { background-color: #fff; color: #0072ff; }
-  .signout { background-color: #ffcc00; color: #000; }
-  .calendar {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin: 20px 0;
-  }
-  .day {
-    width: 60px;
-    height: 60px;
-    margin: 5px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: 10px;
-    background-color: rgba(255,255,255,0.2);
-  }
-  .today { border: 3px solid #fff; font-weight: bold; }
-  .checked-in { background-color: #00ff6a; color: #000; }
-  .work-request {
-    display: flex;
-    flex-direction: column;
-    margin-top: 20px;
-  }
-  input, textarea {
-    padding: 10px;
-    margin: 5px 0;
-    border-radius: 10px;
-    border: none;
-    font-size: 1rem;
-  }
+body { font-family: Arial,sans-serif; margin:0; padding:0; background:linear-gradient(135deg,#00c6ff,#0072ff); color:#fff;}
+.container { max-width:900px; margin:0 auto; padding:20px; }
+h1{text-align:center; margin-bottom:10px;}
+#welcomeScreen,#dashboard{display:none;}
+button{padding:15px 30px;margin:10px;font-size:1.2rem;border:none;border-radius:10px;cursor:pointer; transition:.2s;}
+button:hover{opacity:.8;}
+.yes{background-color:#00ff6a;color:#000;}
+.no{background-color:#ff4d4d;color:#000;}
+.checkin{background-color:#fff;color:#0072ff;}
+.signout{background-color:#ffcc00;color:#000;}
+.calendar{display:flex;justify-content:center;flex-wrap:wrap;margin:20px 0;}
+.day{width:60px;height:60px;margin:5px;display:flex;justify-content:center;align-items:center;border-radius:10px;background-color:rgba(255,255,255,0.2);}
+.today{border:3px solid #fff;font-weight:bold;}
+.checked-in{background-color:#00ff6a;color:#000;}
+.work-request{display:flex;flex-direction:column;margin-top:20px;}
+input,textarea{padding:10px;margin:5px 0;border-radius:10px;border:none;font-size:1rem;}
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>Beach House Guest Dashboard v1.6</h1>
+<h1>Beach House Guest Dashboard v1.6</h1>
 
-  <!-- Welcome Screen -->
-  <div id="welcomeScreen">
-    <h2 id="welcomeMessage"></h2>
-    <p>Are you here?</p>
-    <button class="yes" id="yesBtn">Yes</button>
-    <button class="no" id="noBtn">No</button>
+<!-- Welcome Screen -->
+<div id="welcomeScreen">
+  <h2 id="welcomeMessage"></h2>
+  <p>Are you here?</p>
+  <button class="yes" id="yesBtn">Yes</button>
+  <button class="no" id="noBtn">No</button>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard">
+  <div>
+    <button class="checkin" id="checkinBtn">Check In ✅</button>
+    <button class="signout" id="signoutBtn">Sign Out</button>
   </div>
 
-  <!-- Dashboard -->
-  <div id="dashboard">
-    <div>
-      <button class="checkin" id="checkinBtn">Check In ✅</button>
-      <button class="signout" id="signoutBtn">Sign Out</button>
-    </div>
+  <!-- Calendar -->
+  <div class="calendar" id="calendar"></div>
 
-    <!-- Calendar -->
-    <div class="calendar" id="calendar"></div>
-
-    <!-- Work Request Form -->
-    <div class="work-request">
-      <h3>Submit a Work Request</h3>
-      <textarea id="requestText" placeholder="Describe the issue..." rows="3"></textarea>
-      <button class="checkin" id="submitRequestBtn">Submit Request</button>
-    </div>
+  <!-- Work Request Form -->
+  <div class="work-request">
+    <h3>Submit a Work Request</h3>
+    <textarea id="requestText" placeholder="Describe the issue..." rows="3"></textarea>
+    <button class="checkin" id="submitRequestBtn">Submit Request</button>
   </div>
+</div>
 </div>
 
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-// Supabase credentials
+// Supabase credentials (replace with your project keys)
 const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -117,10 +75,10 @@ const requestText = document.getElementById('requestText');
 const submitRequestBtn = document.getElementById('submitRequestBtn');
 
 let currentGuest = null;
-let today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+let today = new Date().toISOString().slice(0,10);
 
 // Load today's scheduled guest
-async function loadGuest() {
+async function loadGuest(){
   const { data, error } = await supabase
     .from('guests')
     .select('*')
@@ -130,45 +88,31 @@ async function loadGuest() {
     .limit(1)
     .single();
 
-  if(error || !data){
-    alert('No scheduled guest for today.');
-    return;
-  }
-
+  if(error || !data){ alert('No scheduled guest for today.'); return; }
   currentGuest = data;
 
-  // Determine if first day
-  const isFirstDay = currentGuest.checked_in_dates.length === 0 || !currentGuest.checked_in_dates.includes(today);
-
+  const isFirstDay = !currentGuest.checked_in_dates.includes(today);
   if(isFirstDay){
     welcomeMessage.textContent = `Welcome, ${currentGuest.guest_last_name}s!`;
     welcomeScreen.style.display = 'block';
-  } else {
-    showDashboard();
-  }
-
+  } else showDashboard();
   renderCalendar();
 }
 
-// Show dashboard
-function showDashboard() {
+function showDashboard(){
   welcomeScreen.style.display = 'none';
   dashboard.style.display = 'block';
   checkinBtn.disabled = currentGuest.checked_in_dates.includes(today);
 }
 
-// Handle welcome buttons
-yesBtn.addEventListener('click', async () => {
+yesBtn.addEventListener('click', async ()=>{
   await markCheckedIn();
   showDashboard();
 });
 
-noBtn.addEventListener('click', () => {
-  alert('Please contact the admin.');
-});
+noBtn.addEventListener('click', ()=>{ alert('Please contact admin.'); });
 
-// Mark check-in
-async function markCheckedIn() {
+async function markCheckedIn(){
   let updatedDates = currentGuest.checked_in_dates || [];
   if(!updatedDates.includes(today)) updatedDates.push(today);
 
@@ -185,21 +129,17 @@ async function markCheckedIn() {
   }
 }
 
-// Check-in button
 checkinBtn.addEventListener('click', markCheckedIn);
 
-// Sign-out button
-signoutBtn.addEventListener('click', async () => {
-  // For simplicity, just mark as signed out in checked_in_dates if needed
+signoutBtn.addEventListener('click', ()=>{
   alert('Signed out. Have a great day!');
-  dashboard.style.display = 'none';
-  welcomeScreen.style.display = 'block';
+  dashboard.style.display='none';
+  welcomeScreen.style.display='block';
 });
 
-// Submit work request
-submitRequestBtn.addEventListener('click', async () => {
+submitRequestBtn.addEventListener('click', async ()=>{
   const text = requestText.value.trim();
-  if(!text) return alert('Please enter a request.');
+  if(!text) return alert('Enter a request.');
 
   const { error } = await supabase.from('work_requests').insert([{
     guest_id: currentGuest.id,
@@ -207,43 +147,37 @@ submitRequestBtn.addEventListener('click', async () => {
   }]);
 
   if(error) alert('Error submitting request.');
-  else {
-    alert('Request submitted!');
-    requestText.value = '';
-  }
+  else { alert('Request submitted!'); requestText.value=''; }
 });
 
-// Render calendar
-function renderCalendar() {
-  calendarEl.innerHTML = '';
+function renderCalendar(){
+  calendarEl.innerHTML='';
   const start = new Date(currentGuest.start_date);
   const end = new Date(currentGuest.end_date);
 
   for(let d = new Date(start); d <= end; d.setDate(d.getDate()+1)){
     const dayStr = d.toISOString().slice(0,10);
     const div = document.createElement('div');
-    div.className = 'day';
-    if(dayStr === today) div.classList.add('today');
+    div.className='day';
+    if(dayStr===today) div.classList.add('today');
     if(currentGuest.checked_in_dates.includes(dayStr)) div.classList.add('checked-in');
-    div.textContent = d.getDate();
+    div.textContent=d.getDate();
     calendarEl.appendChild(div);
   }
 }
 
-// Auto sign-out at midnight
-function scheduleMidnightSignOut() {
+function scheduleMidnightSignOut(){
   const now = new Date();
-  const msUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1) - now;
-  setTimeout(() => {
+  const msUntilMidnight = new Date(now.getFullYear(),now.getMonth(),now.getDate()+1)-now;
+  setTimeout(()=>{
     signoutBtn.click();
-    scheduleMidnightSignOut(); // schedule next day
+    scheduleMidnightSignOut();
   }, msUntilMidnight);
 }
 
 // Init
 loadGuest();
 scheduleMidnightSignOut();
-
 </script>
 </body>
 </html>
