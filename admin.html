@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Admin v2.8</title>
+<title>Beach House Admin v2.9</title>
 <style>
 html,body{height:100%;margin:0;padding:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#0072ff,#00c6ff);color:#fff;}
 .container{width:95%;max-width:1000px;margin:auto;padding:20px;}
@@ -26,7 +26,7 @@ li button:hover{background:#008fcc;}
 </head>
 <body>
 <div class="container">
-<h1>Beach House Admin Dashboard v2.8</h1>
+<h1>Beach House Admin Dashboard v2.9</h1>
 
 <div class="tabs">
   <div class="tab active" data-tab="guests">Guests</div>
@@ -35,6 +35,7 @@ li button:hover{background:#008fcc;}
   <div class="tab" data-tab="controls">Controls</div>
 </div>
 
+<!-- Guests -->
 <div class="section active" id="guests">
 <h2>Schedule Guest</h2>
 <input type="text" id="guestLastName" placeholder="Guest Last Name">
@@ -49,20 +50,27 @@ li button:hover{background:#008fcc;}
 </table>
 </div>
 
+<!-- Work Requests -->
 <div class="section" id="requests">
 <h2>Work Requests</h2>
 <ul id="workRequestsList"></ul>
 </div>
 
+<!-- Messages -->
 <div class="section" id="messages">
 <h2>Guest Messages</h2>
 <ul id="messagesList"></ul>
+<input type="text" id="newMessageText" placeholder="Send new message to guest">
+<button id="sendNewMessageBtn">Send Message</button>
 </div>
 
+<!-- Controls -->
 <div class="section" id="controls">
 <h2>Controls</h2>
-<button id="forceVerificationBtn">Force Verification Modal</button>
+<button id="lockTabletBtn">Lock Tablet</button>
+<button id="unlockTabletBtn">Unlock Tablet</button>
 </div>
+
 </div>
 
 <script type="module">
@@ -85,6 +93,7 @@ const guestTable = document.getElementById('guestsTable');
 const workRequestsList = document.getElementById('workRequestsList');
 const messagesList = document.getElementById('messagesList');
 
+// Load guests
 async function loadGuests(){
   const { data } = await supabase.from('guests').select('*').order('start_date',{ascending:true});
   guestTable.innerHTML=`<tr><th>Last Name</th><th>Start</th><th>End</th><th>Days Left</th><th>Actions</th></tr>`;
@@ -101,13 +110,13 @@ async function loadGuests(){
       <button onclick="extendGuest(${g.id})">Extend</button>
       <button onclick="shortenGuest(${g.id})">Shorten</button>
       <button onclick="cancelGuest(${g.id})">Cancel</button>
-      <button onclick="unlockGuest(${g.id})">Unlock</button>
     </td>`;
     guestTable.appendChild(row);
   });
 }
 loadGuests();
 
+// Add Guest
 document.getElementById('addGuestBtn').onclick=async()=>{
   const lastName=document.getElementById('guestLastName').value.trim();
   const start=document.getElementById('startDate').value;
@@ -118,6 +127,7 @@ document.getElementById('addGuestBtn').onclick=async()=>{
   loadGuests();
 }
 
+// Extend / Shorten / Cancel
 window.extendGuest=async(id)=>{
   const days=parseInt(prompt("Enter days to extend:"));
   if(isNaN(days)||days<=0) return;
@@ -126,7 +136,6 @@ window.extendGuest=async(id)=>{
   await supabase.from('guests').update({end_date:newEnd.toISOString().slice(0,10)}).eq('id',id);
   loadGuests();
 }
-
 window.shortenGuest=async(id)=>{
   const days=parseInt(prompt("Enter days to shorten:"));
   if(isNaN(days)||days<=0) return;
@@ -135,27 +144,15 @@ window.shortenGuest=async(id)=>{
   await supabase.from('guests').update({end_date:newEnd.toISOString().slice(0,10)}).eq('id',id);
   loadGuests();
 }
-
 window.cancelGuest=async(id)=>{
-  if(!confirm("Cancel guest? This will delete all messages & requests.")) return;
+  if(!confirm("Cancel guest? This will delete messages & requests.")) return;
   await supabase.from('guests').delete().eq('id',id);
   await supabase.from('work_requests').delete().eq('guest_id',id);
   await supabase.from('messages').delete().eq('guest_id',id);
   loadGuests(); loadMessages(); loadWorkRequests();
 }
 
-window.unlockGuest=async(id)=>{
-  await supabase.from('guests').update({verification_status:'pending',verification_date:null}).eq('id',id);
-  alert("Guest will see verification modal on tablet.");
-}
-
-document.getElementById('forceVerificationBtn').onclick=async()=>{
-  const { data }=await supabase.from('guests').select('*').eq('active',true);
-  for(const g of data) await supabase.from('guests').update({verification_status:'pending',verification_date:null}).eq('id',g.id);
-  alert("All active guests will see verification modal.");
-}
-
-// Work requests
+// Load Work Requests
 async function loadWorkRequests(){
   const { data } = await supabase.from('work_requests').select('*,guest_id(guest_last_name)').order('date',{ascending:true});
   workRequestsList.innerHTML='';
@@ -167,26 +164,40 @@ async function loadWorkRequests(){
 }
 loadWorkRequests();
 
-// Messages
+// Load Messages
 async function loadMessages(){
   const { data }=await supabase.from('messages').select('*,guest_id(guest_last_name)').order('date',{ascending:true});
   messagesList.innerHTML='';
   data.forEach(m=>{
     const li=document.createElement('li');
-    li.textContent=`${m.guest_id.guest_last_name}: ${m.message_text} (${new Date(m.date).toLocaleString()})`;
-    const replyBtn=document.createElement('button');replyBtn.textContent='Reply';
-    replyBtn.onclick=async()=>{
-      const reply=prompt("Enter message for guest:");
-      if(reply) await supabase.from('messages').insert([{guest_id:m.guest_id.id,message_text:reply,date:new Date().toISOString()}]);
-      loadMessages();
-    }
-    li.appendChild(replyBtn);
+    li.textContent=`${m.guest_id.guest_last_name}: ${m.message_text}`;
     messagesList.appendChild(li);
   });
 }
-loadMessages();
 
-// Auto-cleanup & checkout at midnight
+// Send new message
+document.getElementById('sendNewMessageBtn').onclick=async()=>{
+  const text=document.getElementById('newMessageText').value.trim();
+  if(!text){alert("Enter message");return;}
+  const { data:guestList } = await supabase.from('guests').select('*').eq('active',true);
+  if(!guestList.length){alert("No active guests"); return;}
+  const guestId=guestList[0].id;
+  await supabase.from('messages').insert([{guest_id:guestId,message_text:text,date:new Date().toISOString()}]);
+  document.getElementById('newMessageText').value='';
+  loadMessages();
+}
+
+// Controls: Lock / Unlock
+document.getElementById('lockTabletBtn').onclick=async()=>{
+  await supabase.from('guests').update({verification_status:'locked'}).eq('active',true);
+  alert("Tablet locked for all guests");
+}
+document.getElementById('unlockTabletBtn').onclick=async()=>{
+  await supabase.from('guests').update({verification_status:'pending'}).eq('active',true);
+  alert("Tablet unlocked for all guests");
+}
+
+// Auto-cleanup
 setInterval(async()=>{
   const today=new Date().toISOString().slice(0,10);
   const { data }=await supabase.from('guests').select('*').eq('active',true);
