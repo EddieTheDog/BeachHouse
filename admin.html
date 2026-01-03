@@ -2,23 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Beach House Admin v3.0</title>
+<title>Beach House Admin v1.0</title>
 <style>
-body{margin:0;padding:0;font-family:Arial;background:#e0f7ff;}
+body{margin:0;font-family:Arial;background:#e0f7ff;}
 header{background:#0077cc;color:white;padding:15px;text-align:center;font-size:24px;}
 main{padding:20px;display:flex;flex-direction:column;gap:15px;}
 button{background:#0077cc;color:white;border:none;padding:8px 12px;border-radius:5px;cursor:pointer;}
 input,textarea,select{padding:6px;border-radius:4px;border:1px solid #ccc;width:100%;}
 table{width:100%;border-collapse:collapse;}
 th,td{border:1px solid #0077cc;padding:6px;text-align:left;}
-.tab{margin-top:10px;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<header>Beach House Admin v3.0</header>
+<header>Beach House Admin</header>
 <main>
-<div class="tab">
+<div>
 <h3>Schedule Guest</h3>
 <input id="guest-lastname" placeholder="Guest Last Name">
 <input type="date" id="start-date">
@@ -26,7 +25,7 @@ th,td{border:1px solid #0077cc;padding:6px;text-align:left;}
 <button id="add-guest-btn">Add Guest</button>
 </div>
 
-<div class="tab">
+<div>
 <h3>Current Guests</h3>
 <table id="guest-table">
 <thead>
@@ -36,7 +35,7 @@ th,td{border:1px solid #0077cc;padding:6px;text-align:left;}
 </table>
 </div>
 
-<div class="tab">
+<div>
 <h3>Work Requests</h3>
 <table id="work-table">
 <thead><tr><th>Guest</th><th>Request</th><th>Date</th></tr></thead>
@@ -44,7 +43,7 @@ th,td{border:1px solid #0077cc;padding:6px;text-align:left;}
 </table>
 </div>
 
-<div class="tab">
+<div>
 <h3>Messages</h3>
 <table id="message-table">
 <thead><tr><th>Guest</th><th>Message</th><th>Date</th></tr></thead>
@@ -52,7 +51,7 @@ th,td{border:1px solid #0077cc;padding:6px;text-align:left;}
 </table>
 </div>
 
-<div class="tab">
+<div>
 <h3>Controls</h3>
 <button id="lock-btn">Lock Tablet</button>
 <button id="unlock-btn">Unlock Tablet</button>
@@ -79,23 +78,23 @@ async function loadGuests(){
 }
 
 async function loadWorkRequests(){
-    const {data}=await supabase.from('work_requests').select('*,guest_id(guest_last_name)').order('date',{ascending:true});
+    const {data}=await supabase.from('work_requests').select('*,guest_id(guest_last_name)').order('created_at',{ascending:true});
     const tbody=document.querySelector('#work-table tbody');
     tbody.innerHTML="";
     data.forEach(w=>{
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${w.guest_id.guest_last_name}</td><td>${w.request_text}</td><td>${new Date(w.date).toLocaleString()}</td>`;
+        tr.innerHTML=`<td>${w.guest_id.guest_last_name}</td><td>${w.request_text}</td><td>${new Date(w.created_at).toLocaleString()}</td>`;
         tbody.appendChild(tr);
     });
 }
 
 async function loadMessages(){
-    const {data}=await supabase.from('messages').select('*,guest_id(guest_last_name)').order('date',{ascending:true});
+    const {data}=await supabase.from('messages').select('*,guest_id(guest_last_name)').order('created_at',{ascending:true});
     const tbody=document.querySelector('#message-table tbody');
     tbody.innerHTML="";
     data.forEach(m=>{
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${m.guest_id.guest_last_name}</td><td>${m.message_text}</td><td>${new Date(m.date).toLocaleString()}</td>`;
+        tr.innerHTML=`<td>${m.guest_id.guest_last_name}</td><td>${m.message_text}</td><td>${new Date(m.created_at).toLocaleString()}</td>`;
         tbody.appendChild(tr);
     });
 }
