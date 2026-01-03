@@ -52,14 +52,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     async function loadGuest() {
         const today = new Date().toISOString().split('T')[0];
 
-        // Fetch guests active today
-        const { data, error } = await supabaseClient
-            .from('guests')
-            .select('*')
-            .gte('start_date', today)
-            .lte('end_date', today)
-            .eq('active', true)
-            .order('start_date', { ascending:true });
+const { data, error } = await supabaseClient
+    .from('guests')
+    .select('*')
+    .lte('start_date', today)   // started on or before today
+    .gte('end_date', today)     // ending on or after today
+    .eq('active', true)
+    .order('start_date', { ascending: true });
+
 
         const welcomeDiv = document.getElementById('welcome');
         const checkinSection = document.getElementById('checkin-section');
