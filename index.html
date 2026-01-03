@@ -1,178 +1,261 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Beach House Guest Dashboard v2.1</title>
-<style>
-body { margin:0; font-family:Arial; background:#e0f7ff; display:flex; flex-direction:column; min-height:100vh;}
-header { background:#00aaff; color:white; padding:15px; text-align:center; font-size:24px;}
-main { flex:1; max-width:600px; margin:auto; padding:20px; display:flex; flex-direction:column; gap:15px;}
-button { background:#00aaff; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer;}
-input, textarea { width:100%; padding:8px; border-radius:5px; border:1px solid #ccc;}
-.message-app { border:1px solid #00aaff; border-radius:6px; padding:10px; max-height:200px; overflow-y:auto; background:white;}
-.hidden { display:none; }
-</style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beach House Guest Dashboard v2.2</title>
+    <style>
+        :root {
+            --primary: #00aaff;
+            --accent: #ffcc00;
+            --bg: #f0faff;
+            --text: #333;
+            --card-bg: #ffffff;
+        }
+
+        body { 
+            margin: 0; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: var(--bg); 
+            color: var(--text);
+            display: flex; flex-direction: column; min-height: 100vh;
+        }
+
+        header { 
+            background: var(--primary); 
+            color: white; 
+            padding: 20px; 
+            text-align: center; 
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        main { 
+            flex: 1; 
+            max-width: 500px; 
+            margin: 20px auto; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px;
+            width: 90%;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        button { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 12px; 
+            border-radius: 8px; 
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button:hover { opacity: 0.9; }
+        button.secondary { background: #6c757d; }
+
+        input, textarea { 
+            width: 100%; 
+            padding: 12px; 
+            border-radius: 8px; 
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .message-app { 
+            border: 1px solid #eee; 
+            border-radius: 8px; 
+            padding: 10px; 
+            height: 250px; 
+            overflow-y: auto; 
+            background: #fafafa;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .msg { padding: 8px 12px; border-radius: 15px; max-width: 80%; font-size: 14px; }
+        .msg.guest { align-self: flex-end; background: var(--primary); color: white; }
+        .msg.host { align-self: flex-start; background: #e9e9eb; color: black; }
+
+        .hidden { display: none !important; }
+        .locked-msg { text-align: center; color: #dc3545; font-weight: bold; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
 </head>
 <body>
-<header>Beach House Guest Dashboard</header>
+
+<header>🌊 Beach House Guest Hub</header>
+
 <main>
-<div id="welcome"></div>
+    <div id="status-message" class="card hidden"></div>
 
-<div id="checkin-section" class="hidden">
-    <p>Welcome to the Beach House! Is this you?</p>
-    <button id="yes-btn">Yes</button>
-    <button id="no-btn">No</button>
-</div>
-
-<div id="guest-actions" class="hidden">
-    <p>Days left: <span id="days-left"></span></p>
-    <button id="checkout-btn">I'm Leaving</button>
-    <button id="work-request-btn">Submit Work Request</button>
-    <div id="work-request-form" class="hidden">
-        <textarea id="request-text" placeholder="Describe your work request"></textarea>
-        <button id="submit-request-btn">Submit</button>
+    <div id="checkin-section" class="card hidden">
+        <p>Welcome to the Beach House! Are you ready to check in?</p>
+        <div style="display:flex; gap:10px;">
+            <button id="yes-btn" style="flex:1">Yes, that's me!</button>
+            <button id="no-btn" class="secondary">No</button>
+        </div>
     </div>
 
-    <div class="message-app" id="messages"></div>
-    <textarea id="new-message" placeholder="Send a message to host"></textarea>
-    <button id="send-message-btn">Send</button>
-</div>
+    <div id="guest-actions" class="hidden">
+        <div class="card" style="margin-bottom:15px; text-align:center;">
+            <h3 style="margin:0">Days remaining: <span id="days-left">0</span></h3>
+            <button id="checkout-btn" class="secondary" style="margin-top:10px; font-size:12px;">Check Out Early</button>
+        </div>
+
+        <div class="card">
+            <h4>Maintenance</h4>
+            <button id="work-request-btn">Submit Work Request</button>
+            <div id="work-request-form" class="hidden" style="margin-top:10px;">
+                <textarea id="request-text" placeholder="What needs fixing?"></textarea>
+                <button id="submit-request-btn" style="width:100%; margin-top:5px;">Send Request</button>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:15px;">
+            <h4>Chat with Host</h4>
+            <div class="message-app" id="messages"></div>
+            <div style="display:flex; gap:5px; margin-top:10px;">
+                <input type="text" id="new-message" placeholder="Type a message...">
+                <button id="send-message-btn">Send</button>
+            </div>
+        </div>
+    </div>
+</main>
 
 <script>
-window.addEventListener('DOMContentLoaded', async () => {
-    // Initialize Supabase
-    const supabaseClient = supabase.createClient(
-        'https://ofnlpqfscyecatetnuqi.supabase.co',
-        'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc'
-    );
+    const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let guestData = null;
 
-    async function loadGuest() {
+    async function init() {
         const today = new Date().toISOString().split('T')[0];
+        
+        // Fetch current active guest
+        const { data, error } = await supabaseClient
+            .from('guests')
+            .select('*')
+            .lte('start_date', today)
+            .gte('end_date', today)
+            .eq('active', true)
+            .maybeSingle();
 
-const { data, error } = await supabaseClient
-    .from('guests')
-    .select('*')
-    .lte('start_date', today)   // started on or before today
-    .gte('end_date', today)     // ending on or after today
-    .eq('active', true)
-    .order('start_date', { ascending: true });
+        if (error) return showError("Error connecting to database.");
+        if (!data) return showError("No active booking found for today.");
 
+        guestData = data;
+        renderView();
+    }
 
-        const welcomeDiv = document.getElementById('welcome');
-        const checkinSection = document.getElementById('checkin-section');
-        const guestActions = document.getElementById('guest-actions');
+    function renderView() {
+        const statusDiv = document.getElementById('status-message');
+        const checkinSec = document.getElementById('checkin-section');
+        const actionsSec = document.getElementById('guest-actions');
 
-        // Hide all sections first
-        checkinSection.classList.add('hidden');
-        guestActions.classList.add('hidden');
-
-        if(error) { welcomeDiv.innerText = "Error loading guest info."; console.error(error); return; }
-        if(!data || data.length === 0) {
-            welcomeDiv.innerText = "No guests scheduled today.";
-            return;
-        }
-
-        guestData = data[0];
-
-        if(guestData.verification_status === 'pending'){
-            checkinSection.classList.remove('hidden');
-        } else if(guestData.verification_status === 'verified'){
-            guestActions.classList.remove('hidden');
-            loadGuestDetails();
-        } else if(guestData.verification_status === 'locked'){
-            checkinSection.innerHTML = "<p>Tablet locked, contact host.</p>";
+        if (guestData.verification_status === 'locked') {
+            statusDiv.innerHTML = "<p class='locked-msg'>Tablet locked. Please contact the host for assistance.</p>";
+            statusDiv.classList.remove('hidden');
+        } else if (guestData.verification_status === 'pending') {
+            checkinSec.classList.remove('hidden');
+        } else {
+            actionsSec.classList.remove('hidden');
+            setupDashboard();
         }
     }
 
-    function loadGuestDetails() {
-        const today = new Date();
+    function setupDashboard() {
+        // Calculate days left
         const end = new Date(guestData.end_date);
-        const diff = Math.ceil((end - today)/(1000*60*60*24)) + 1;
-        document.getElementById('days-left').innerText = diff >= 0 ? diff : 0;
+        const diff = Math.ceil((end - new Date()) / (1000 * 60 * 60 * 24));
+        document.getElementById('days-left').innerText = diff > 0 ? diff : 0;
+
         loadMessages();
+        subscribeToMessages();
     }
 
     async function loadMessages() {
-        if(!guestData) return;
-        const { data, error } = await supabaseClient
+        const { data } = await supabaseClient
             .from('messages')
             .select('*')
             .eq('guest_id', guestData.id)
-            .order('created_at', { ascending:true });
+            .order('created_at', { ascending: true });
 
-        const messagesDiv = document.getElementById('messages');
-        messagesDiv.innerHTML = "";
-        if(!data) return;
-        data.forEach(m => {
-            const p = document.createElement('p');
-            p.innerText = m.message_text;
-            messagesDiv.appendChild(p);
-        });
+        const container = document.getElementById('messages');
+        container.innerHTML = data.map(m => `
+            <div class="msg ${m.sender_type === 'host' ? 'host' : 'guest'}">
+                ${m.message_text}
+            </div>
+        `).join('');
+        container.scrollTop = container.scrollHeight;
     }
 
+    function subscribeToMessages() {
+        supabaseClient
+            .channel('public:messages')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `guest_id=eq.${guestData.id}` }, 
+            payload => {
+                loadMessages(); 
+            })
+            .subscribe();
+    }
+
+    // Event Listeners
     document.getElementById('yes-btn').onclick = async () => {
-        if(!guestData) return;
-        await supabaseClient
-            .from('guests')
-            .update({ verification_status:'verified', checked_in:true })
-            .eq('id', guestData.id);
-        document.getElementById('checkin-section').classList.add('hidden');
-        document.getElementById('guest-actions').classList.remove('hidden');
-        loadGuestDetails();
-    };
-
-    document.getElementById('no-btn').onclick = async () => {
-        if(!guestData) return;
-        await supabaseClient
-            .from('guests')
-            .update({ verification_status:'locked' })
-            .eq('id', guestData.id);
-        document.getElementById('checkin-section').innerHTML = "<p>Tablet locked, contact host.</p>";
-    };
-
-    document.getElementById('checkout-btn').onclick = async () => {
-        if(!guestData) return;
-        await supabaseClient
-            .from('guests')
-            .update({ active:false })
-            .eq('id', guestData.id);
-        alert("You have checked out!");
+        await supabaseClient.from('guests').update({ verification_status: 'verified', checked_in: true }).eq('id', guestData.id);
         location.reload();
     };
 
-    document.getElementById('work-request-btn').onclick = () => {
-        document.getElementById('work-request-form').classList.remove('hidden');
-    };
-
-    document.getElementById('submit-request-btn').onclick = async () => {
-        if(!guestData) return;
-        const text = document.getElementById('request-text').value.trim();
-        if(!text) return;
-        await supabaseClient
-            .from('work_requests')
-            .insert({ guest_id: guestData.id, request_text: text });
-        document.getElementById('request-text').value = "";
-        document.getElementById('work-request-form').classList.add('hidden');
-        alert("Work request submitted!");
+    document.getElementById('no-btn').onclick = async () => {
+        await supabaseClient.from('guests').update({ verification_status: 'locked' }).eq('id', guestData.id);
+        location.reload();
     };
 
     document.getElementById('send-message-btn').onclick = async () => {
-        if(!guestData) return;
-        const text = document.getElementById('new-message').value.trim();
-        if(!text) return;
-        await supabaseClient
-            .from('messages')
-            .insert({ guest_id: guestData.id, message_text: text });
-        document.getElementById('new-message').value = "";
-        loadMessages();
+        const input = document.getElementById('new-message');
+        const text = input.value.trim();
+        if (!text) return;
+        
+        await supabaseClient.from('messages').insert({ 
+            guest_id: guestData.id, 
+            message_text: text,
+            sender_type: 'guest' // Added this to differentiate in UI
+        });
+        input.value = "";
     };
 
-    loadGuest();
-});
+    document.getElementById('work-request-btn').onclick = () => {
+        document.getElementById('work-request-form').classList.toggle('hidden');
+    };
+
+    document.getElementById('submit-request-btn').onclick = async () => {
+        const text = document.getElementById('request-text').value.trim();
+        if(!text) return;
+        await supabaseClient.from('work_requests').insert({ guest_id: guestData.id, request_text: text });
+        alert("Maintenance notified!");
+        document.getElementById('work-request-form').classList.add('hidden');
+    };
+
+    function showError(msg) {
+        const statusDiv = document.getElementById('status-message');
+        statusDiv.innerText = msg;
+        statusDiv.classList.remove('hidden');
+    }
+
+    init();
 </script>
-</main>
+
 </body>
 </html>
