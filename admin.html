@@ -6,10 +6,17 @@
 <title>Beach House Admin</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <style>
-  body { font-family: system-ui, sans-serif; padding: 20px; background: #fffaf0; }
-  h1 { margin-bottom: 20px; }
-  .request { border: 1px solid #ccc; border-radius: 5px; padding: 10px; margin-bottom: 10px; }
-  .request p { margin: 0; }
+  body { font-family: system-ui, sans-serif; background: #fff8e1; padding: 20px; min-height: 100vh; }
+  h1 { margin-bottom: 20px; text-align: center; }
+  .request {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #fff;
+    box-shadow: 1px 1px 5px rgba(0,0,0,0.1);
+  }
+  .request p { margin: 3px 0; }
 </style>
 </head>
 <body>
@@ -18,8 +25,8 @@
 <div id="requests">Loading...</div>
 
 <script>
-  const supabaseUrl = 'YOUR_SUPABASE_URL';
-  const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
+  const supabaseUrl = 'https://ofnlpqfscyecatetnuqi.supabase.co';
+  const supabaseKey = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
   const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
   const requestsEl = document.getElementById('requests');
@@ -30,6 +37,7 @@
       requestsEl.innerText = 'No requests yet';
       return;
     }
+
     requestsEl.innerHTML = data.map(r => `
       <div class="request">
         <p><strong>${r.name}</strong> (${r.room})</p>
