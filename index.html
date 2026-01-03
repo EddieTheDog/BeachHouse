@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Guest Dashboard v2.0</title>
+<title>Beach House Guest Dashboard v2.1</title>
 <style>
 body { font-family: Arial,sans-serif; margin:0; padding:0; background:linear-gradient(135deg,#00c6ff,#0072ff); color:#fff;}
 .container { max-width:900px; margin:0 auto; padding:20px;}
@@ -22,7 +22,7 @@ button { cursor:pointer; font-weight:bold; transition:0.2s;}
 </head>
 <body>
 <div class="container">
-<h1>Beach House Guest Dashboard v2.0</h1>
+<h1>Beach House Guest Dashboard v2.1</h1>
 
 <h2 id="welcomeMessage"></h2>
 <div class="calendar" id="calendar"></div>
@@ -52,21 +52,22 @@ let currentGuest = null;
 const today = new Date().toISOString().slice(0,10);
 
 async function loadGuest(){
+  // Get guest scheduled today (start_date <= today <= end_date)
   const { data, error } = await supabase.from('guests')
     .select('*')
-    .lte('end_date', today)
-    .gte('start_date', today)
+    .lte('start_date', today)
+    .gte('end_date', today)
     .eq('active', true)
-    .limit(1)
-    .single();
+    .order('start_date', { ascending:true });
 
-  if(error || !data){
+  if(error || !data || data.length === 0){
     welcomeMessage.textContent='No guest scheduled today.';
     workRequestSection.classList.add('hidden');
+    calendarEl.innerHTML='';
     return;
   }
 
-  currentGuest = data;
+  currentGuest = data[0]; // pick first guest for this tablet
   welcomeMessage.textContent=`Welcome, ${currentGuest.guest_last_name}s!`;
   workRequestSection.classList.remove('hidden');
 
