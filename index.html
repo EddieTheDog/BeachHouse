@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Beach House Guest Dashboard v1.0</title>
+<title>Beach House Guest Dashboard v2.0</title>
 <style>
 body { margin:0; font-family:Arial; background:#e0f7ff; display:flex; flex-direction:column; min-height:100vh;}
 header { background:#00aaff; color:white; padding:15px; text-align:center; font-size:24px;}
@@ -10,6 +10,7 @@ main { flex:1; max-width:600px; margin:auto; padding:20px; display:flex; flex-di
 button { background:#00aaff; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer;}
 input, textarea { width:100%; padding:8px; border-radius:5px; border:1px solid #ccc;}
 .message-app { border:1px solid #00aaff; border-radius:6px; padding:10px; max-height:200px; overflow-y:auto; background:white;}
+.hidden { display:none; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -18,17 +19,17 @@ input, textarea { width:100%; padding:8px; border-radius:5px; border:1px solid #
 <main>
 <div id="welcome"></div>
 
-<div id="checkin-section" style="display:none;">
+<div id="checkin-section" class="hidden">
     <p>Welcome to the Beach House! Is this you?</p>
     <button id="yes-btn">Yes</button>
     <button id="no-btn">No</button>
 </div>
 
-<div id="guest-actions" style="display:none;">
+<div id="guest-actions" class="hidden">
     <p>Days left: <span id="days-left"></span></p>
     <button id="checkout-btn">I'm Leaving</button>
     <button id="work-request-btn">Submit Work Request</button>
-    <div id="work-request-form" style="display:none;">
+    <div id="work-request-form" class="hidden">
         <textarea id="request-text" placeholder="Describe your work request"></textarea>
         <button id="submit-request-btn">Submit</button>
     </div>
@@ -39,103 +40,108 @@ input, textarea { width:100%; padding:8px; border-radius:5px; border:1px solid #
 </div>
 
 <script>
-const supabaseUrl = 'https://ofnlpqfscyecatetnuqi.supabase.co';
-const supabaseKey = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+window.addEventListener('DOMContentLoaded', async () => {
+    const supabaseUrl = 'https://ofnlpqfscyecatetnuqi.supabase.co';
+    const supabaseKey = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
+    window.supabase = window.supabase || supabase.createClient(supabaseUrl, supabaseKey);
 
-let guestData;
+    let guestData;
 
-async function loadGuest() {
-    const today = new Date().toISOString().split('T')[0];
-    const { data } = await supabase
-        .from('guests')
-        .select('*')
-        .lte('end_date', today)
-        .gte('start_date', today)
-        .eq('active', true)
-        .order('start_date', { ascending:true });
+    async function loadGuest() {
+        const today = new Date().toISOString().split('T')[0];
+        const { data } = await supabase
+            .from('guests')
+            .select('*')
+            .lte('end_date', today)
+            .gte('start_date', today)
+            .eq('active', true)
+            .order('start_date', { ascending:true });
 
-    const welcomeDiv = document.getElementById('welcome');
-    if(!data || data.length===0){
-        welcomeDiv.innerText = "No guests scheduled today.";
-        return;
-    }
+        const welcomeDiv = document.getElementById('welcome');
+        const checkinSection = document.getElementById('checkin-section');
+        const guestActions = document.getElementById('guest-actions');
 
-    guestData = data[0];
-    const checkinSection = document.getElementById('checkin-section');
-    const guestActions = document.getElementById('guest-actions');
-
-    if(guestData.verification_status === 'pending'){
-        checkinSection.style.display = 'block';
-        document.getElementById('yes-btn').onclick = async ()=>{
-            await supabase.from('guests').update({verification_status:'verified', checked_in:true}).eq('id', guestData.id);
-            checkinSection.style.display='none';
-            guestActions.style.display='block';
-            loadGuestDetails();
+        if(!data || data.length===0){
+            welcomeDiv.innerText = "No guests scheduled today.";
+            return;
         }
-        document.getElementById('no-btn').onclick = async ()=>{
-            await supabase.from('guests').update({verification_status:'locked'}).eq('id', guestData.id);
+
+        guestData = data[0];
+
+        if(guestData.verification_status === 'pending'){
+            checkinSection.classList.remove('hidden');
+        } else if(guestData.verification_status === 'verified'){
+            guestActions.classList.remove('hidden');
+            loadGuestDetails();
+        } else if(guestData.verification_status === 'locked'){
             checkinSection.innerHTML = "<p>Tablet locked, contact host.</p>";
         }
-    } else if(guestData.verification_status === 'verified'){
-        guestActions.style.display='block';
-        loadGuestDetails();
-    } else if(guestData.verification_status === 'locked'){
-        checkinSection.innerHTML = "<p>Tablet locked, contact host.</p>";
     }
-}
 
-function loadGuestDetails(){
-    const today = new Date();
-    const end = new Date(guestData.end_date);
-    const diff = Math.ceil((end-today)/(1000*60*60*24))+1;
-    document.getElementById('days-left').innerText = diff>=0 ? diff : 0;
-    loadMessages();
-}
+    function loadGuestDetails(){
+        const today = new Date();
+        const end = new Date(guestData.end_date);
+        const diff = Math.ceil((end-today)/(1000*60*60*24))+1;
+        document.getElementById('days-left').innerText = diff>=0 ? diff : 0;
+        loadMessages();
+    }
 
-async function loadMessages(){
-    const { data } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('guest_id', guestData.id)
-        .order('created_at', {ascending:true});
-    const messagesDiv = document.getElementById('messages');
-    messagesDiv.innerHTML = "";
-    data.forEach(m=>{
-        const p = document.createElement('p');
-        p.innerText = m.message_text;
-        messagesDiv.appendChild(p);
-    });
-}
+    async function loadMessages(){
+        const { data } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('guest_id', guestData.id)
+            .order('created_at', {ascending:true});
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.innerHTML = "";
+        data.forEach(m=>{
+            const p = document.createElement('p');
+            p.innerText = m.message_text;
+            messagesDiv.appendChild(p);
+        });
+    }
 
-document.getElementById('send-message-btn').onclick = async ()=>{
-    const text = document.getElementById('new-message').value;
-    if(!text) return;
-    await supabase.from('messages').insert({guest_id:guestData.id,message_text:text});
-    document.getElementById('new-message').value="";
-    loadMessages();
-}
+    document.getElementById('yes-btn').onclick = async ()=>{
+        await supabase.from('guests').update({verification_status:'verified', checked_in:true}).eq('id', guestData.id);
+        document.getElementById('checkin-section').classList.add('hidden');
+        document.getElementById('guest-actions').classList.remove('hidden');
+        loadGuestDetails();
+    }
 
-document.getElementById('work-request-btn').onclick = ()=>{
-    document.getElementById('work-request-form').style.display='block';
-}
+    document.getElementById('no-btn').onclick = async ()=>{
+        await supabase.from('guests').update({verification_status:'locked'}).eq('id', guestData.id);
+        document.getElementById('checkin-section').innerHTML = "<p>Tablet locked, contact host.</p>";
+    }
 
-document.getElementById('submit-request-btn').onclick = async ()=>{
-    const text = document.getElementById('request-text').value;
-    if(!text) return;
-    await supabase.from('work_requests').insert({guest_id:guestData.id,request_text:text});
-    document.getElementById('request-text').value="";
-    document.getElementById('work-request-form').style.display='none';
-    alert("Work request submitted!");
-}
+    document.getElementById('checkout-btn').onclick = async ()=>{
+        await supabase.from('guests').update({active:false}).eq('id',guestData.id);
+        alert("You have checked out!");
+        location.reload();
+    }
 
-document.getElementById('checkout-btn').onclick = async ()=>{
-    await supabase.from('guests').update({active:false}).eq('id',guestData.id);
-    alert("You have checked out!");
-    location.reload();
-}
+    document.getElementById('work-request-btn').onclick = ()=>{
+        document.getElementById('work-request-form').classList.remove('hidden');
+    }
 
-window.onload = loadGuest;
+    document.getElementById('submit-request-btn').onclick = async ()=>{
+        const text = document.getElementById('request-text').value;
+        if(!text) return;
+        await supabase.from('work_requests').insert({guest_id:guestData.id,request_text:text});
+        document.getElementById('request-text').value="";
+        document.getElementById('work-request-form').classList.add('hidden');
+        alert("Work request submitted!");
+    }
+
+    document.getElementById('send-message-btn').onclick = async ()=>{
+        const text = document.getElementById('new-message').value;
+        if(!text) return;
+        await supabase.from('messages').insert({guest_id:guestData.id,message_text:text});
+        document.getElementById('new-message').value="";
+        loadMessages();
+    }
+
+    loadGuest();
+});
 </script>
 </main>
 </body>
