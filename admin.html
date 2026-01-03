@@ -3,49 +3,215 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Admin v1.2</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<title>Beach House Admin Dashboard v1.0</title>
 <style>
-  body { font-family: system-ui, sans-serif; background: #fff8e1; padding: 20px; min-height: 100vh; }
-  h1 { margin-bottom: 20px; text-align: center; }
-  .request { border: 1px solid #ccc; border-radius: 5px; padding: 12px; margin-bottom: 10px; background: #fff; box-shadow: 1px 1px 5px rgba(0,0,0,0.1); }
-  .request p { margin: 3px 0; }
-  footer { margin-top: 20px; font-size: 0.8rem; color: #555; text-align: center; }
+  body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #0072ff, #00c6ff);
+    color: #fff;
+    margin: 0;
+    padding: 0;
+  }
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  h1 { text-align: center; margin-bottom: 20px; }
+  input, button, select {
+    padding: 10px;
+    margin: 5px;
+    border-radius: 10px;
+    border: none;
+    font-size: 1rem;
+  }
+  button { cursor: pointer; transition: 0.2s; }
+  button:hover { opacity: 0.8; }
+  .add-guest { background-color: #00ff6a; color: #000; }
+  .update { background-color: #ffcc00; color: #000; }
+  .delete { background-color: #ff4d4d; color: #000; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: rgba(255,255,255,0.2);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  th, td {
+    padding: 10px;
+    text-align: left;
+  }
+  th { background-color: rgba(0,0,0,0.4); }
+  td { background-color: rgba(255,255,255,0.1); }
 </style>
 </head>
 <body>
+<div class="container">
+  <h1>Beach House Admin Dashboard v1.0</h1>
 
-<h1>All Work Requests v1.2</h1>
-<div id="requests">Loading...</div>
-<footer>Version 1.2</footer>
+  <h2>Add / Update Family</h2>
+  <input type="text" id="lastName" placeholder="Family Last Name">
+  <input type="date" id="startDate">
+  <input type="date" id="endDate">
+  <button class="add-guest" id="addBtn">Add Family</button>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const supabaseUrl = 'https://ofnlpqfscyecatetnuqi.supabase.co';
-  const supabaseKey = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-  const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+  <h2>Scheduled Families</h2>
+  <table id="guestsTable">
+    <thead>
+      <tr>
+        <th>Family Last Name</th>
+        <th>Start Date</th>
+        <th>End Date</th>
+        <th>Checked In Dates</th>
+        <th>Active</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-  const requestsEl = document.getElementById('requests');
+  <h2>Work Requests</h2>
+  <table id="requestsTable">
+    <thead>
+      <tr>
+        <th>Family</th>
+        <th>Request</th>
+        <th>Status</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-  async function loadRequests() {
-    const { data } = await supabaseClient.from('work_requests').select('*').order('id', { ascending: false });
-    if (!data || data.length === 0) {
-      requestsEl.innerText = 'No requests yet';
-      return;
-    }
+</div>
 
-    requestsEl.innerHTML = data.map(r => `
-      <div class="request">
-        <p><strong>${r.name}</strong> (${r.room})</p>
-        <p>${r.request}</p>
-        <p>Status: ${r.status} | Submitted: ${new Date(r.date).toLocaleString()}</p>
-      </div>
-    `).join('');
-  }
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-  loadRequests();
+// Supabase credentials
+const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Elements
+const lastNameInput = document.getElementById('lastName');
+const startDateInput = document.getElementById('startDate');
+const endDateInput = document.getElementById('endDate');
+const addBtn = document.getElementById('addBtn');
+const guestsTable = document.getElementById('guestsTable').querySelector('tbody');
+const requestsTable = document.getElementById('requestsTable').querySelector('tbody');
+
+// Load all scheduled families
+async function loadGuests() {
+  const { data, error } = await supabase
+    .from('guests')
+    .select('*')
+    .order('start_date', { ascending: true });
+
+  if(error) return console.error(error);
+
+  guestsTable.innerHTML = '';
+  data.forEach(guest => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${guest.guest_last_name}</td>
+      <td>${guest.start_date}</td>
+      <td>${guest.end_date}</td>
+      <td>${guest.checked_in_dates.join(', ')}</td>
+      <td>${guest.active ? 'Yes' : 'No'}</td>
+      <td>
+        <button class="update" data-id="${guest.id}">Update</button>
+        <button class="delete" data-id="${guest.id}">Cancel</button>
+      </td>
+    `;
+    guestsTable.appendChild(tr);
+  });
+
+  // Attach update/cancel handlers
+  document.querySelectorAll('.update').forEach(btn => {
+    btn.addEventListener('click', () => updateGuest(btn.dataset.id));
+  });
+  document.querySelectorAll('.delete').forEach(btn => {
+    btn.addEventListener('click', () => cancelGuest(btn.dataset.id));
+  });
+}
+
+// Load work requests
+async function loadRequests() {
+  const { data, error } = await supabase
+    .from('work_requests')
+    .select('*, guests(guest_last_name)')
+    .order('date', { ascending: true });
+
+  if(error) return console.error(error);
+
+  requestsTable.innerHTML = '';
+  data.forEach(req => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${req.guests.guest_last_name}</td>
+      <td>${req.request_text}</td>
+      <td>${req.status}</td>
+      <td>${new Date(req.date).toLocaleString()}</td>
+    `;
+    requestsTable.appendChild(tr);
+  });
+}
+
+// Add family
+addBtn.addEventListener('click', async () => {
+  const lastName = lastNameInput.value.trim();
+  const start = startDateInput.value;
+  const end = endDateInput.value;
+  if(!lastName || !start || !end) return alert('Fill all fields');
+
+  const { error } = await supabase.from('guests').insert([{
+    guest_last_name: lastName,
+    start_date: start,
+    end_date: end,
+    active: true,
+    checked_in_dates: []
+  }]);
+
+  if(error) return alert('Error adding family');
+
+  lastNameInput.value = '';
+  startDateInput.value = '';
+  endDateInput.value = '';
+  loadGuests();
 });
-</script>
 
+// Update guest (change dates)
+async function updateGuest(id) {
+  const newStart = prompt('Enter new start date (YYYY-MM-DD):');
+  const newEnd = prompt('Enter new end date (YYYY-MM-DD):');
+  if(!newStart || !newEnd) return;
+
+  const { error } = await supabase
+    .from('guests')
+    .update({ start_date: newStart, end_date: newEnd })
+    .eq('id', id);
+
+  if(error) return alert('Error updating family');
+  loadGuests();
+}
+
+// Cancel guest (mark inactive)
+async function cancelGuest(id) {
+  if(!confirm('Cancel this stay?')) return;
+  const { error } = await supabase
+    .from('guests')
+    .update({ active: false })
+    .eq('id', id);
+
+  if(error) return alert('Error cancelling family');
+  loadGuests();
+}
+
+// Initial load
+loadGuests();
+loadRequests();
+</script>
 </body>
 </html>
