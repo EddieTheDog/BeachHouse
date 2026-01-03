@@ -1,165 +1,377 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Beach House Admin v2.0</title>
-<style>
-body{margin:0;font-family:Arial;background:#e0f7ff;}
-header{background:#0077cc;color:white;padding:15px;text-align:center;font-size:24px;}
-main{padding:20px;display:flex;flex-direction:column;gap:15px;}
-button{background:#0077cc;color:white;border:none;padding:8px 12px;border-radius:5px;cursor:pointer;}
-input,textarea,select{padding:6px;border-radius:4px;border:1px solid #ccc;width:100%;}
-table{width:100%;border-collapse:collapse;}
-th,td{border:1px solid #0077cc;padding:6px;text-align:left;}
-.tabs { display:flex; gap:10px; margin-bottom:10px;}
-.tab { padding:8px 12px; background:#0077cc; color:white; cursor:pointer; border-radius:5px;}
-.tab-content { display:none; }
-.tab-content.active { display:block; }
-</style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.37.0/dist/supabase.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beach House Admin v2.0</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.37.0/dist/supabase.min.js"></script>
+    <style>
+        :root {
+            --primary: #0077cc;
+            --primary-dark: #005fa3;
+            --accent: #00d2ff;
+            --bg: #f0f4f8;
+            --text: #334e68;
+            --white: #ffffff;
+            --border: #d9e2ec;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* --- Sidebar --- */
+        nav {
+            width: 260px;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        nav h1 {
+            font-size: 1.2rem;
+            padding: 0 20px 20px;
+            margin: 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            letter-spacing: 1px;
+        }
+
+        .tab {
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+
+        .tab:hover { background: var(--primary-dark); }
+        .tab.active { background: var(--primary-dark); border-left: 5px solid var(--accent); }
+
+        /* --- Main Content --- */
+        main {
+            flex-grow: 1;
+            padding: 30px;
+            max-width: 1200px;
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- UI Elements --- */
+        .card {
+            background: var(--white);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+        }
+
+        h2 { margin-top: 0; font-size: 1.5rem; color: var(--primary); }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            align-items: end;
+        }
+
+        input, select {
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        button:hover { background: var(--primary-dark); }
+        button.secondary { background: #627d98; }
+
+        /* --- Table Styling --- */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: white;
+        }
+
+        th {
+            background: #f9fafb;
+            color: #486581;
+            text-align: left;
+            padding: 12px;
+            border-bottom: 2px solid var(--border);
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge-green { background: #dcfce7; color: #166534; }
+        .badge-gray { background: #f1f5f9; color: #475569; }
+
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+    </style>
 </head>
 <body>
-<header>Beach House Admin</header>
+
+<nav>
+    <h1>BEACH HOUSE ADMIN</h1>
+    <div class="tab active" data-tab="guests">📅 Guests</div>
+    <div class="tab" data-tab="work">🛠️ Work Requests</div>
+    <div class="tab" data-tab="messages">💬 Messages</div>
+    <div class="tab" data-tab="controls">📱 Tablet Controls</div>
+</nav>
+
 <main>
-<div class="tabs">
-    <div class="tab" data-tab="guests">Guests</div>
-    <div class="tab" data-tab="work">Work Requests</div>
-    <div class="tab" data-tab="messages">Messages</div>
-    <div class="tab" data-tab="controls">Controls</div>
-</div>
+    <div id="guests" class="tab-content active">
+        <div class="card">
+            <h2>Schedule New Guest</h2>
+            <div class="form-grid">
+                <div>
+                    <label>Last Name</label>
+                    <input id="guest-lastname" type="text" placeholder="e.g. Smith">
+                </div>
+                <div>
+                    <label>Check-In</label>
+                    <input type="date" id="start-date">
+                </div>
+                <div>
+                    <label>Check-Out</label>
+                    <input type="date" id="end-date">
+                </div>
+                <button id="add-guest-btn">Add Reservation</button>
+            </div>
+        </div>
 
-<div id="guests" class="tab-content">
-<h3>Schedule Guest</h3>
-<input id="guest-lastname" placeholder="Guest Last Name">
-<input type="date" id="start-date">
-<input type="date" id="end-date">
-<button id="add-guest-btn">Add Guest</button>
+        <div class="card">
+            <h2>Current & Upcoming Guests</h2>
+            <table id="guest-table">
+                <thead>
+                    <tr>
+                        <th>Last Name</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
 
-<h3>Current Guests</h3>
-<table id="guest-table">
-<thead><tr><th>Last Name</th><th>Start</th><th>End</th><th>Checked-In</th><th>Actions</th></tr></thead>
-<tbody></tbody>
-</table>
-</div>
+    <div id="work" class="tab-content">
+        <div class="card">
+            <h2>Maintenance Requests</h2>
+            <table id="work-table">
+                <thead>
+                    <tr><th>Guest</th><th>Request Details</th><th>Received</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
 
-<div id="work" class="tab-content">
-<h3>Work Requests</h3>
-<table id="work-table">
-<thead><tr><th>Guest</th><th>Request</th><th>Date</th></tr></thead>
-<tbody></tbody>
-</table>
-</div>
+    <div id="messages" class="tab-content">
+        <div class="card">
+            <h2>Guest Messages</h2>
+            <table id="message-table">
+                <thead>
+                    <tr><th>Guest</th><th>Message</th><th>Received</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
 
-<div id="messages" class="tab-content">
-<h3>Messages</h3>
-<table id="message-table">
-<thead><tr><th>Guest</th><th>Message</th><th>Date</th></tr></thead>
-<tbody></tbody>
-</table>
-</div>
-
-<div id="controls" class="tab-content">
-<h3>Tablet Controls</h3>
-<button id="lock-btn">Lock Tablet</button>
-<button id="unlock-btn">Unlock Tablet</button>
-</div>
+    <div id="controls" class="tab-content">
+        <div class="card">
+            <h2>Remote Tablet Lock</h2>
+            <p>Restrict guest access to the tablet interface instantly.</p>
+            <div style="display: flex; gap: 10px;">
+                <button id="lock-btn" style="background:#dc2626;">Lock Tablet Now</button>
+                <button id="unlock-btn" class="secondary">Unlock Tablet</button>
+            </div>
+        </div>
+    </div>
+</main>
 
 <script>
+/**
+ * Beach House Admin - Logic Core
+ */
 window.addEventListener('DOMContentLoaded', async () => {
-    // Initialize Supabase
-    window.supabase = window.supabase || supabase.createClient(
-        'https://ofnlpqfscyecatetnuqi.supabase.co',
-        'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc'
-    );
+    
+    // 1. Initialize Supabase
+    const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // 2. Navigation Logic
     const tabs = document.querySelectorAll('.tab');
-    const tabContents = document.querySelectorAll('.tab-content');
-    tabs.forEach(tab=>{
-        tab.onclick = ()=>{
-            tabContents.forEach(c=>c.classList.remove('active'));
-            document.getElementById(tab.dataset.tab).classList.add('active');
-        }
+    const contents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+        tab.onclick = () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+            
+            tab.classList.add('active');
+            const target = document.getElementById(tab.dataset.tab);
+            target.classList.add('active');
+
+            // Data refresh on tab change
+            if(tab.dataset.tab === 'guests') loadGuests();
+            if(tab.dataset.tab === 'work') loadWorkRequests();
+            if(tab.dataset.tab === 'messages') loadMessages();
+        };
     });
-    tabs[0].click(); // activate first tab
 
-    async function loadGuests(){
-        const {data} = await window.supabase.from('guests').select('*').order('start_date',{ascending:true});
-        const tbody=document.querySelector('#guest-table tbody');
-        tbody.innerHTML="";
-        data.forEach(g=>{
-            const tr=document.createElement('tr');
-            tr.innerHTML=`<td>${g.guest_last_name}</td><td>${g.start_date}</td><td>${g.end_date}</td><td>${g.checked_in}</td>
-            <td>
-            <button onclick="cancelGuest(${g.id})">Cancel</button>
-            <button onclick="extendGuest(${g.id})">Extend</button>
-            </td>`;
-            tbody.appendChild(tr);
-        });
+    // 3. Guest Management
+    async function loadGuests() {
+        const { data, error } = await _supabase
+            .from('guests')
+            .select('*')
+            .order('start_date', { ascending: true });
+
+        if (error) return console.error(error);
+
+        const tbody = document.querySelector('#guest-table tbody');
+        tbody.innerHTML = data.map(g => `
+            <tr>
+                <td><strong>${g.guest_last_name}</strong></td>
+                <td>${g.start_date}</td>
+                <td>${g.end_date}</td>
+                <td>
+                    <span class="badge ${g.checked_in ? 'badge-green' : 'badge-gray'}">
+                        ${g.checked_in ? 'In House' : 'Upcoming'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn-sm secondary" onclick="extendGuest(${g.id}, '${g.end_date}')">Extend</button>
+                    <button class="btn-sm" style="background:#beccda; color:#333" onclick="cancelGuest(${g.id})">Delete</button>
+                </td>
+            </tr>
+        `).join('');
     }
 
-    async function loadWorkRequests(){
-        const {data} = await window.supabase.from('work_requests').select('*,guest_id(guest_last_name)').order('created_at',{ascending:true});
-        const tbody=document.querySelector('#work-table tbody');
-        tbody.innerHTML="";
-        data.forEach(w=>{
-            const tr=document.createElement('tr');
-            tr.innerHTML=`<td>${w.guest_id.guest_last_name}</td><td>${w.request_text}</td><td>${new Date(w.created_at).toLocaleString()}</td>`;
-            tbody.appendChild(tr);
-        });
+    // 4. Work Requests & Messages (Linked Queries)
+    async function loadWorkRequests() {
+        const { data, error } = await _supabase
+            .from('work_requests')
+            .select('*, guests(guest_last_name)')
+            .order('created_at', { ascending: false });
+
+        const tbody = document.querySelector('#work-table tbody');
+        tbody.innerHTML = data.map(w => `
+            <tr>
+                <td>${w.guests?.guest_last_name || 'Anonymous'}</td>
+                <td>${w.request_text}</td>
+                <td>${new Date(w.created_at).toLocaleDateString()}</td>
+            </tr>
+        `).join('');
     }
 
-    async function loadMessages(){
-        const {data} = await window.supabase.from('messages').select('*,guest_id(guest_last_name)').order('created_at',{ascending:true});
-        const tbody=document.querySelector('#message-table tbody');
-        tbody.innerHTML="";
-        data.forEach(m=>{
-            const tr=document.createElement('tr');
-            tr.innerHTML=`<td>${m.guest_id.guest_last_name}</td><td>${m.message_text}</td><td>${new Date(m.created_at).toLocaleString()}</td>`;
-            tbody.appendChild(tr);
-        });
+    async function loadMessages() {
+        const { data, error } = await _supabase
+            .from('messages')
+            .select('*, guests(guest_last_name)')
+            .order('created_at', { ascending: false });
+
+        const tbody = document.querySelector('#message-table tbody');
+        tbody.innerHTML = data.map(m => `
+            <tr>
+                <td>${m.guests?.guest_last_name || 'Anonymous'}</td>
+                <td>${m.message_text}</td>
+                <td>${new Date(m.created_at).toLocaleDateString()}</td>
+            </tr>
+        `).join('');
     }
 
-    window.cancelGuest = async (id)=>{
-        await window.supabase.from('guests').delete().eq('id',id);
+    // 5. Global Actions
+    window.cancelGuest = async (id) => {
+        if(!confirm("Delete this reservation?")) return;
+        await _supabase.from('guests').delete().eq('id', id);
         loadGuests();
-    }
+    };
 
-    window.extendGuest = async (id)=>{
-        const days = prompt("Enter number of days to extend:");
+    window.extendGuest = async (id, currentEnd) => {
+        const days = prompt("How many days to add?");
         if(!days || isNaN(days)) return;
-        const guest=await window.supabase.from('guests').select('*').eq('id',id).single();
-        let newEnd=new Date(guest.data.end_date);
-        newEnd.setDate(newEnd.getDate()+parseInt(days));
-        await window.supabase.from('guests').update({end_date:newEnd.toISOString().split('T')[0]}).eq('id',id);
+
+        let date = new Date(currentEnd);
+        date.setDate(date.getDate() + parseInt(days));
+        const newDateString = date.toISOString().split('T')[0];
+
+        await _supabase.from('guests').update({ end_date: newDateString }).eq('id', id);
         loadGuests();
-    }
+    };
 
-    document.getElementById('add-guest-btn').onclick=async ()=>{
-        const ln=document.getElementById('guest-lastname').value;
-        const sd=document.getElementById('start-date').value;
-        const ed=document.getElementById('end-date').value;
-        if(!ln || !sd || !ed) return alert("Fill all fields");
-        await window.supabase.from('guests').insert({guest_last_name:ln,start_date:sd,end_date:ed,verification_status:'pending',active:true});
-        document.getElementById('guest-lastname').value="";
-        document.getElementById('start-date').value="";
-        document.getElementById('end-date').value="";
+    // 6. Event Handlers
+    document.getElementById('add-guest-btn').onclick = async () => {
+        const ln = document.getElementById('guest-lastname').value;
+        const sd = document.getElementById('start-date').value;
+        const ed = document.getElementById('end-date').value;
+
+        if(!ln || !sd || !ed) return alert("Please fill all fields");
+
+        await _supabase.from('guests').insert([{ 
+            guest_last_name: ln, 
+            start_date: sd, 
+            end_date: ed, 
+            checked_in: false 
+        }]);
+
         loadGuests();
-    }
+        // Clear inputs
+        ['guest-lastname', 'start-date', 'end-date'].forEach(id => document.getElementById(id).value = "");
+    };
 
-    document.getElementById('lock-btn').onclick=async ()=>{
-        await window.supabase.from('controls').update({tablet_locked:true}).eq('id',1);
-        alert("Tablet locked");
-    }
-    document.getElementById('unlock-btn').onclick=async ()=>{
-        await window.supabase.from('controls').update({tablet_locked:false}).eq('id',1);
-        alert("Tablet unlocked");
-    }
+    document.getElementById('lock-btn').onclick = async () => {
+        await _supabase.from('controls').update({ tablet_locked: true }).eq('id', 1);
+        alert("Tablet is now LOCKED");
+    };
 
+    document.getElementById('unlock-btn').onclick = async () => {
+        await _supabase.from('controls').update({ tablet_locked: false }).eq('id', 1);
+        alert("Tablet is now UNLOCKED");
+    };
+
+    // Initial Load
     loadGuests();
-    loadWorkRequests();
-    loadMessages();
 });
 </script>
-</main>
 </body>
 </html>
