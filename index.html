@@ -3,35 +3,70 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Guest Dashboard v2.1</title>
+<title>Beach House Guest Dashboard v2.4</title>
 <style>
-body { font-family: Arial,sans-serif; margin:0; padding:0; background:linear-gradient(135deg,#00c6ff,#0072ff); color:#fff;}
-.container { max-width:900px; margin:0 auto; padding:20px;}
-h1,h2 { text-align:center; margin-bottom:20px;}
-.calendar { display:flex; flex-wrap:wrap; justify-content:center; margin:20px 0;}
-.day { width:70px; height:60px; margin:5px; display:flex; justify-content:center; align-items:center; border-radius:10px; background-color:rgba(255,255,255,0.2); font-weight:bold;}
-.today { border:3px solid #fff;}
-.checked-in { background-color:#00ff6a; color:#000;}
-textarea,button { width:100%; padding:10px; margin:5px 0; border-radius:10px; border:none; font-size:1rem;}
-button { cursor:pointer; font-weight:bold; transition:0.2s;}
-.submit-btn { background-color:#fff;color:#0072ff; font-weight:bold;}
-.submit-btn:hover { opacity:0.8;}
-.feedback { font-weight:bold; margin-top:5px;}
-.hidden { display:none; }
+html,body {height:100%;margin:0;padding:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#00c6ff,#0072ff);color:#fff;overflow-x:hidden;}
+.container {max-width:900px;margin:0 auto;padding:20px;height:100%;display:flex;flex-direction:column;justify-content:flex-start;}
+h1,h2,h3 {text-align:center;margin-bottom:20px;}
+#time {text-align:center;font-size:1.2rem;margin-bottom:10px;}
+.calendar {display:flex;flex-wrap:wrap;justify-content:center;margin:20px 0;flex-grow:0;}
+.day {width:70px;height:60px;margin:5px;display:flex;justify-content:center;align-items:center;border-radius:10px;background-color:rgba(255,255,255,0.2);font-weight:bold;}
+.today {border:3px solid #fff;}
+.checked-in {background-color:#00ff6a;color:#000;}
+button {cursor:pointer;font-weight:bold;padding:10px 15px;border-radius:10px;border:none;margin:5px;transition:0.2s;}
+#requestBtn {background-color:#fff;color:#0072ff;}
+#requestBtn:hover {opacity:0.8;}
+#messageBtn {background-color:#fffa00;color:#000;}
+#messageBtn:hover {opacity:0.8;}
+.feedback {font-weight:bold;margin-top:5px;text-align:center;}
+.modal-bg {display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);justify-content:center;align-items:center;z-index:10;}
+.modal {background:#fff;color:#000;padding:20px;border-radius:15px;max-width:400px;width:90%;display:flex;flex-direction:column;}
+.modal textarea, .modal input {width:100%;padding:10px;margin:5px 0;border-radius:10px;border:1px solid #ccc;}
+.modal button {margin-top:10px;}
 </style>
 </head>
 <body>
 <div class="container">
-<h1>Beach House Guest Dashboard v2.1</h1>
-
+<h1>Beach House Guest Dashboard v2.4</h1>
+<div id="time"></div>
 <h2 id="welcomeMessage"></h2>
+<h3 id="daysLeft"></h3>
 <div class="calendar" id="calendar"></div>
 
-<div class="work-request hidden" id="workRequestSection">
-  <textarea id="requestText" placeholder="Describe an issue..." rows="3"></textarea>
-  <button class="submit-btn" id="submitRequestBtn">Submit Request</button>
-  <span class="feedback" id="guestFeedback"></span>
+<div style="text-align:center;">
+<button id="requestBtn" disabled>Submit Work Request</button>
+<button id="messageBtn" disabled>Message Host</button>
 </div>
+
+<div class="feedback" id="guestFeedback"></div>
+
+<!-- Work Request Modal -->
+<div class="modal-bg" id="workModal">
+  <div class="modal">
+    <h3>Submit Work Request</h3>
+    <textarea id="requestText" placeholder="Describe the issue..." rows="4"></textarea>
+    <button id="submitRequestBtn">Send Request</button>
+    <button id="closeWorkModal">Cancel</button>
+  </div>
+</div>
+
+<!-- Message Modal -->
+<div class="modal-bg" id="messageModal">
+  <div class="modal">
+    <h3>Message Host</h3>
+    <textarea id="messageText" placeholder="Your message..." rows="4"></textarea>
+    <button id="sendMessageBtn">Send</button>
+    <button id="closeMessageModal">Cancel</button>
+  </div>
+</div>
+
+<!-- Verification Modal -->
+<div class="modal-bg" id="verifyModal">
+  <div class="modal">
+    <h3 id="verifyText">Welcome to the Beach House! Is this you?</h3>
+    <button id="verifyYes">Yes</button>
+    <button id="verifyNo">No</button>
+  </div>
 </div>
 
 <script type="module">
@@ -42,17 +77,33 @@ const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const welcomeMessage = document.getElementById('welcomeMessage');
+const daysLeftEl = document.getElementById('daysLeft');
 const calendarEl = document.getElementById('calendar');
-const requestText = document.getElementById('requestText');
-const submitRequestBtn = document.getElementById('submitRequestBtn');
 const guestFeedback = document.getElementById('guestFeedback');
-const workRequestSection = document.getElementById('workRequestSection');
 
 let currentGuest = null;
 const today = new Date().toISOString().slice(0,10);
 
+// Buttons & Modals
+const requestBtn = document.getElementById('requestBtn');
+const workModal = document.getElementById('workModal');
+const closeWorkModal = document.getElementById('closeWorkModal');
+const submitRequestBtn = document.getElementById('submitRequestBtn');
+const requestText = document.getElementById('requestText');
+
+const messageBtn = document.getElementById('messageBtn');
+const messageModal = document.getElementById('messageModal');
+const closeMessageModal = document.getElementById('closeMessageModal');
+const sendMessageBtn = document.getElementById('sendMessageBtn');
+const messageText = document.getElementById('messageText');
+
+const verifyModal = document.getElementById('verifyModal');
+const verifyText = document.getElementById('verifyText');
+const verifyYes = document.getElementById('verifyYes');
+const verifyNo = document.getElementById('verifyNo');
+
+// --- Load Guest ---
 async function loadGuest(){
-  // Get guest scheduled today (start_date <= today <= end_date)
   const { data, error } = await supabase.from('guests')
     .select('*')
     .lte('start_date', today)
@@ -62,14 +113,69 @@ async function loadGuest(){
 
   if(error || !data || data.length === 0){
     welcomeMessage.textContent='No guest scheduled today.';
-    workRequestSection.classList.add('hidden');
+    daysLeftEl.textContent='';
     calendarEl.innerHTML='';
+    requestBtn.disabled = true;
+    messageBtn.disabled = true;
     return;
   }
 
-  currentGuest = data[0]; // pick first guest for this tablet
+  currentGuest = data[0];
+
+  // Reset verification if new day
+  if(currentGuest.verification_date !== today){
+    await supabase.from('guests').update({
+      verification_status: 'pending',
+      verification_date: today
+    }).eq('id', currentGuest.id);
+    currentGuest.verification_status = 'pending';
+    currentGuest.verification_date = today;
+  }
+
+  if(currentGuest.verification_status === 'locked'){
+    welcomeMessage.textContent='Please contact the host for assistance.';
+    requestBtn.disabled = true;
+    messageBtn.disabled = true;
+    return;
+  }
+
+  if(currentGuest.verification_status === 'pending'){
+    verifyText.textContent = `Welcome to the Beach House! Is this ${currentGuest.guest_last_name}s?`;
+    verifyModal.style.display='flex';
+  } else {
+    showDashboard();
+  }
+}
+
+// --- Verification ---
+verifyYes.addEventListener('click', async ()=>{
+  verifyModal.style.display='none';
+  await supabase.from('guests').update({
+    verification_status: 'confirmed'
+  }).eq('id', currentGuest.id);
+  currentGuest.verification_status = 'confirmed';
+  showDashboard();
+});
+
+verifyNo.addEventListener('click', async ()=>{
+  verifyModal.style.display='none';
+  await supabase.from('guests').update({
+    verification_status: 'locked'
+  }).eq('id', currentGuest.id);
+  currentGuest.verification_status = 'locked';
+  welcomeMessage.textContent='Please contact the host for assistance.';
+});
+
+// --- Dashboard Show ---
+async function showDashboard(){
   welcomeMessage.textContent=`Welcome, ${currentGuest.guest_last_name}s!`;
-  workRequestSection.classList.remove('hidden');
+  requestBtn.disabled = false;
+  messageBtn.disabled = false;
+
+  const end = new Date(currentGuest.end_date);
+  const now = new Date();
+  const diff = Math.ceil((end - now)/(1000*60*60*24)) + 1;
+  daysLeftEl.textContent=`Days left: ${diff}`;
 
   if(!currentGuest.checked_in_dates.includes(today)){
     await markCheckedIn();
@@ -79,20 +185,20 @@ async function loadGuest(){
   scheduleMidnightSignOut();
 }
 
+// --- Check-in ---
 async function markCheckedIn(){
   let updatedDates = currentGuest.checked_in_dates || [];
   if(!updatedDates.includes(today)) updatedDates.push(today);
-
-  const { error } = await supabase.from('guests').update({checked_in_dates:updatedDates}).eq('id',currentGuest.id);
+  const { error } = await supabase.from('guests').update({checked_in_dates:updatedDates}).eq('id', currentGuest.id);
   if(error) console.error('Error checking in:', error);
   currentGuest.checked_in_dates = updatedDates;
 }
 
+// --- Calendar ---
 function renderCalendar(){
   calendarEl.innerHTML='';
   const start = new Date(currentGuest.start_date);
   const end = new Date(currentGuest.end_date);
-
   for(let d = new Date(start); d <= end; d.setDate(d.getDate()+1)){
     const dayStr = d.toISOString().slice(0,10);
     const div = document.createElement('div');
@@ -104,21 +210,58 @@ function renderCalendar(){
   }
 }
 
+// --- Work Request Modal ---
+requestBtn.addEventListener('click', ()=>{ workModal.style.display='flex'; });
+closeWorkModal.addEventListener('click', ()=>{ workModal.style.display='none'; requestText.value=''; });
 submitRequestBtn.addEventListener('click', async ()=>{
-  if(!currentGuest){ guestFeedback.textContent='You must be checked in first.'; return; }
   const text = requestText.value.trim();
   if(!text){ guestFeedback.textContent='Enter a request.'; return; }
-
-  const { error } = await supabase.from('work_requests').insert([{guest_id:currentGuest.id,request_text:text}]);
+  const { error } = await supabase.from('work_requests').insert([{guest_id:currentGuest.id, request_text:text}]);
   if(error){ guestFeedback.textContent='Error submitting request.'; console.error(error);}
-  else { guestFeedback.textContent='Request submitted!'; requestText.value=''; }
+  else { guestFeedback.textContent='Request submitted!'; requestText.value=''; workModal.style.display='none'; }
 });
 
+// --- Message Modal ---
+messageBtn.addEventListener('click', ()=>{ messageModal.style.display='flex'; });
+closeMessageModal.addEventListener('click', ()=>{ messageModal.style.display='none'; messageText.value=''; });
+sendMessageBtn.addEventListener('click', async ()=>{
+  const text = messageText.value.trim();
+  if(!text){ guestFeedback.textContent='Enter a message.'; return; }
+  const { error } = await supabase.from('messages').insert([{guest_id:currentGuest.id, message_text:text}]);
+  if(error){ guestFeedback.textContent='Error sending message.'; console.error(error);}
+  else { guestFeedback.textContent='Message sent!'; messageText.value=''; messageModal.style.display='none'; }
+});
+
+// --- Midnight sign out & auto-delete past guests/messages ---
 function scheduleMidnightSignOut(){
   const now=new Date();
   const msUntilMidnight=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1)-now;
-  setTimeout(()=>{ guestFeedback.textContent='You have been signed out for the day.'; scheduleMidnightSignOut(); }, msUntilMidnight);
+  setTimeout(async ()=>{
+    await cleanupPastGuests();
+    guestFeedback.textContent='You have been signed out for the day.';
+    scheduleMidnightSignOut();
+  }, msUntilMidnight);
 }
+
+async function cleanupPastGuests(){
+  const todayStr = new Date().toISOString().slice(0,10);
+  const { data: oldGuests } = await supabase.from('guests').select('id').lt('end_date', todayStr);
+  if(oldGuests && oldGuests.length>0){
+    for(let g of oldGuests){
+      await supabase.from('messages').delete().eq('guest_id', g.id);
+      await supabase.from('work_requests').delete().eq('guest_id', g.id);
+      await supabase.from('guests').delete().eq('id', g.id);
+    }
+  }
+}
+
+// --- Time Display ---
+function updateTime(){
+  const now = new Date();
+  document.getElementById('time').textContent = now.toLocaleTimeString();
+}
+setInterval(updateTime, 1000);
+updateTime();
 
 loadGuest();
 </script>
