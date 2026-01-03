@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beach House Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<style>
+  body { font-family: system-ui, sans-serif; padding: 20px; background: #fffaf0; }
+  h1 { margin-bottom: 20px; }
+  .request { border: 1px solid #ccc; border-radius: 5px; padding: 10px; margin-bottom: 10px; }
+  .request p { margin: 0; }
+</style>
+</head>
+<body>
+
+<h1>All Work Requests</h1>
+<div id="requests">Loading...</div>
+
+<script>
+  const supabaseUrl = 'YOUR_SUPABASE_URL';
+  const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
+  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+  const requestsEl = document.getElementById('requests');
+
+  async function loadRequests() {
+    const { data } = await supabase.from('work_requests').select('*').order('id', { ascending: false });
+    if (!data || data.length === 0) {
+      requestsEl.innerText = 'No requests yet';
+      return;
+    }
+    requestsEl.innerHTML = data.map(r => `
+      <div class="request">
+        <p><strong>${r.name}</strong> (${r.room})</p>
+        <p>${r.request}</p>
+        <p>Status: ${r.status} | Submitted: ${new Date(r.date).toLocaleString()}</p>
+      </div>
+    `).join('');
+  }
+
+  loadRequests();
+</script>
+
+</body>
+</html>
