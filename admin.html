@@ -5,13 +5,100 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Beach House Admin Dashboard v2.7</title>
 <style>
-html,body{height:100%;margin:0;padding:0;font-family:Arial,sans-serif;background:#222;color:#fff;display:flex;justify-content:center;align-items:flex-start;}
-.container{width:95%;max-width:1000px;padding:20px;}
-button,input,textarea{padding:8px;margin:5px;border-radius:10px;border:none;}
-button{cursor:pointer;font-weight:bold;}
-table{width:100%;border-collapse:collapse;margin-top:10px;}
-th,td{padding:10px;border:1px solid #444;text-align:center;}
-h2,h3{margin-top:20px;}
+/* FULL SCREEN BLUE BACKGROUND */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #0072ff, #00c6ff);
+  color: #fff;
+}
+
+/* MAIN CONTAINER */
+.container {
+  width: 95%;
+  max-width: 1000px;
+  margin: auto;
+  padding: 20px;
+}
+
+/* HEADINGS */
+h1, h2, h3 {
+  margin-top: 20px;
+  text-align: center;
+  text-shadow: 1px 1px 5px rgba(0,0,0,0.3);
+}
+
+/* INPUTS & BUTTONS */
+button, input, textarea {
+  padding: 10px;
+  margin: 5px;
+  border-radius: 10px;
+  border: none;
+}
+
+button {
+  cursor: pointer;
+  font-weight: bold;
+  background: #005dbf;
+  color: #fff;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: #003f7f;
+}
+
+input, textarea {
+  width: calc(100% - 30px);
+  border-radius: 10px;
+  border: none;
+  margin-bottom: 10px;
+}
+
+/* TABLE STYLE */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,0.3);
+  text-align: center;
+}
+
+th {
+  background: rgba(0,0,0,0.3);
+}
+
+/* LISTS */
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  background: rgba(255,255,255,0.1);
+  margin: 5px 0;
+  padding: 10px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+li button {
+  background: #00bfff;
+  padding: 5px 10px;
+}
+li button:hover {
+  background: #008fcc;
+}
 </style>
 </head>
 <body>
@@ -53,12 +140,14 @@ const guestTable = document.getElementById('guestsTable');
 const workRequestsList = document.getElementById('workRequestsList');
 const messagesList = document.getElementById('messagesList');
 
+// Load current guests
 async function loadGuests(){
   const { data } = await supabase.from('guests').select('*').order('start_date',{ascending:true});
   guestTable.innerHTML=`<tr><th>Last Name</th><th>Start</th><th>End</th><th>Days Left</th><th>Actions</th></tr>`;
   const today = new Date();
   data.forEach(g=>{
-    const start = new Date(g.start_date); const end = new Date(g.end_date);
+    const start = new Date(g.start_date); 
+    const end = new Date(g.end_date);
     const daysLeft = Math.max(0,Math.ceil((end-today)/(1000*60*60*24))+1);
     const row = document.createElement('tr');
     row.innerHTML=`
@@ -163,10 +252,9 @@ async function loadMessages(){
   });
 }
 
-// Automatic cleanup
+// Automatic cleanup & checkout at midnight
 setInterval(async ()=>{
   const today = new Date().toISOString().slice(0,10);
-  // Checkout finished guests
   const { data } = await supabase.from('guests').select('*').eq('active',true);
   for(const g of data){
     if(today>g.end_date){
