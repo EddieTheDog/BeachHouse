@@ -3,139 +3,102 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Admin Dashboard v1.1</title>
+<title>Beach House Admin Dashboard v2.0</title>
 <style>
 body { font-family: Arial,sans-serif; margin:0; padding:0; background:linear-gradient(135deg,#0072ff,#00c6ff); color:#fff; }
 .container { max-width:1000px; margin:0 auto; padding:20px; }
-h1 { text-align:center; margin-bottom:20px; }
+h1,h2,h3 { text-align:center; margin-bottom:20px; }
 section { background:rgba(0,0,0,0.2); padding:15px; border-radius:10px; margin-bottom:20px; }
 input,textarea,button,select { width:100%; padding:10px; margin:5px 0; border-radius:10px; border:none; font-size:1rem; }
 button { cursor:pointer; transition:0.2s; font-weight:bold; }
 .add-btn { background-color:#00ff6a; color:#000; }
-.add-btn:hover { opacity:0.8; }
+.add-btn:hover { opacity:.8; }
 .cancel-btn { background-color:#ff4d4d; color:#000; }
-.cancel-btn:hover { opacity:0.8; }
+.cancel-btn:hover { opacity:.8; }
 .feedback { font-weight:bold; margin-top:5px; }
 table { width:100%; border-collapse:collapse; margin-top:10px; }
-th,td { padding:10px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.3); }
+th,td { padding:10px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.3);}
 </style>
 </head>
 <body>
 <div class="container">
-<h1>Beach House Admin Dashboard v1.1</h1>
+<h1>Beach House Admin Dashboard v2.0</h1>
 
-<section id="scheduleGuestSection">
-  <h2>Schedule a Guest</h2>
-  <input type="text" id="guestLastName" placeholder="Guest Last Name">
-  <input type="date" id="startDate">
-  <input type="date" id="endDate">
-  <button class="add-btn" id="addGuestBtn">Add Guest</button>
-  <span class="feedback" id="scheduleFeedback"></span>
+<section>
+<h2>Schedule a Guest</h2>
+<input type="text" id="guestLastName" placeholder="Guest Last Name">
+<input type="date" id="startDate">
+<input type="date" id="endDate">
+<button class="add-btn" id="addGuestBtn">Add Guest</button>
+<span class="feedback" id="scheduleFeedback"></span>
 </section>
 
-<section id="guestListSection">
-  <h2>Current Guests</h2>
-  <table id="guestTable">
-    <thead>
-      <tr><th>Last Name</th><th>Start</th><th>End</th><th>Checked-In Days</th><th>Actions</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+<section>
+<h2>Current Guests</h2>
+<table id="guestTable">
+<thead><tr><th>Last Name</th><th>Start</th><th>End</th><th>Checked-In</th><th>Actions</th></tr></thead>
+<tbody></tbody>
+</table>
 </section>
 
-<section id="workRequestsSection">
-  <h2>Work Requests</h2>
-  <table id="requestTable">
-    <thead>
-      <tr><th>Guest</th><th>Request</th><th>Status</th><th>Date</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+<section>
+<h2>Work Requests</h2>
+<table id="requestTable">
+<thead><tr><th>Guest</th><th>Request</th><th>Status</th><th>Date</th></tr></thead>
+<tbody></tbody>
+</table>
 </section>
 
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+const SUPABASE_URL='https://ofnlpqfscyecatetnuqi.supabase.co';
+const SUPABASE_KEY='sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
+const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
 
-// --- Supabase config ---
-const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const guestLastName=document.getElementById('guestLastName');
+const startDate=document.getElementById('startDate');
+const endDate=document.getElementById('endDate');
+const addGuestBtn=document.getElementById('addGuestBtn');
+const scheduleFeedback=document.getElementById('scheduleFeedback');
+const guestTableBody=document.querySelector('#guestTable tbody');
+const requestTableBody=document.querySelector('#requestTable tbody');
 
-// --- Elements ---
-const guestLastName = document.getElementById('guestLastName');
-const startDate = document.getElementById('startDate');
-const endDate = document.getElementById('endDate');
-const addGuestBtn = document.getElementById('addGuestBtn');
-const scheduleFeedback = document.getElementById('scheduleFeedback');
-
-const guestTableBody = document.querySelector('#guestTable tbody');
-const requestTableBody = document.querySelector('#requestTable tbody');
-
-// --- Add Guest ---
 addGuestBtn.addEventListener('click', async ()=>{
-  const lastName = guestLastName.value.trim();
-  const start = startDate.value;
-  const end = endDate.value;
-
-  if(!lastName || !start || !end){ scheduleFeedback.textContent='All fields required.'; return; }
-
-  const { error } = await supabase.from('guests').insert([{
-    guest_last_name: lastName,
-    start_date: start,
-    end_date: end
-  }]);
-
-  if(error){ scheduleFeedback.textContent='Error adding guest.'; console.error(error); }
-  else { 
-    scheduleFeedback.textContent='Guest added!';
-    guestLastName.value=''; startDate.value=''; endDate.value='';
-    loadGuests();
-  }
+  const lastName=guestLastName.value.trim();
+  const start=startDate.value;
+  const end=endDate.value;
+  if(!lastName||!start||!end){ scheduleFeedback.textContent='All fields required.'; return; }
+  const { error } = await supabase.from('guests').insert([{guest_last_name:lastName,start_date:start,end_date:end}]);
+  if(error){ scheduleFeedback.textContent='Error adding guest.'; console.error(error);}
+  else{ scheduleFeedback.textContent='Guest added!'; guestLastName.value=''; startDate.value=''; endDate.value=''; loadGuests();}
 });
 
-// --- Load Guests ---
 async function loadGuests(){
-  const { data, error } = await supabase.from('guests').select('*').order('start_date', { ascending:true });
+  const { data, error } = await supabase.from('guests').select('*').order('start_date',{ascending:true});
   if(error) return console.error(error);
   guestTableBody.innerHTML='';
   data.forEach(g=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML=`
-      <td>${g.guest_last_name}</td>
-      <td>${g.start_date}</td>
-      <td>${g.end_date}</td>
-      <td>${(g.checked_in_dates||[]).join(', ')}</td>
-      <td>
-        <button class="cancel-btn" data-id="${g.id}">Cancel</button>
-      </td>
-    `;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${g.guest_last_name}</td><td>${g.start_date}</td><td>${g.end_date}</td><td>${(g.checked_in_dates||[]).join(', ')}</td>
+    <td><button class="cancel-btn" data-id="${g.id}">Cancel</button></td>`;
     guestTableBody.appendChild(tr);
   });
-
-  // Attach cancel buttons
   document.querySelectorAll('.cancel-btn').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
-      const id = btn.dataset.id;
+      const id=btn.dataset.id;
       const { error } = await supabase.from('guests').update({active:false}).eq('id',id);
-      if(error) console.error(error);
-      loadGuests();
+      if(error) console.error(error); else loadGuests();
     });
   });
 }
 
-// --- Load Work Requests ---
 async function loadRequests(){
   const { data, error } = await supabase.from('work_requests').select('*,guest_id(guest_last_name)').order('date',{ascending:true});
   if(error) return console.error(error);
   requestTableBody.innerHTML='';
   data.forEach(r=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML=`
-      <td>${r.guest_id?.guest_last_name || 'Unknown'}</td>
-      <td>${r.request_text}</td>
-      <td>${r.status}</td>
-      <td>${new Date(r.date).toLocaleString()}</td>
-    `;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${r.guest_id?.guest_last_name || 'Unknown'}</td><td>${r.request_text}</td><td>${r.status}</td><td>${new Date(r.date).toLocaleString()}</td>`;
     requestTableBody.appendChild(tr);
   });
 }
