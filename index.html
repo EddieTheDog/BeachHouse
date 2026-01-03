@@ -6,59 +6,51 @@
 <title>Beach House Guest Dashboard v2.0</title>
 <style>
 body { font-family: Arial,sans-serif; margin:0; padding:0; background:linear-gradient(135deg,#00c6ff,#0072ff); color:#fff;}
-.container { max-width:900px; margin:0 auto; padding:20px; }
-h1{text-align:center; margin-bottom:20px;}
-.dashboard { display:flex; flex-direction:column; align-items:center; }
-.calendar { display:flex; justify-content:center; flex-wrap:wrap; margin:20px 0; max-width:600px; }
-.day { width:60px; height:60px; margin:5px; display:flex; justify-content:center; align-items:center; border-radius:10px; background-color:rgba(255,255,255,0.2); font-weight:bold; }
-.today { border:3px solid #fff; }
-.checked-in { background-color:#00ff6a; color:#000; }
-.work-request { display:flex; flex-direction:column; margin-top:20px; width:100%; max-width:600px; }
-input,textarea,button { padding:10px; margin:5px 0; border-radius:10px; border:none; font-size:1rem; }
-button { cursor:pointer; transition:0.2s; }
-.submit-btn { background-color:#fff;color:#0072ff; font-weight:bold; }
-.submit-btn:hover { opacity:0.8; }
-.feedback { margin-top:10px; font-weight:bold; }
+.container { max-width:900px; margin:0 auto; padding:20px;}
+h1,h2 { text-align:center; margin-bottom:20px;}
+.calendar { display:flex; flex-wrap:wrap; justify-content:center; margin:20px 0;}
+.day { width:70px; height:60px; margin:5px; display:flex; justify-content:center; align-items:center; border-radius:10px; background-color:rgba(255,255,255,0.2); font-weight:bold;}
+.today { border:3px solid #fff;}
+.checked-in { background-color:#00ff6a; color:#000;}
+textarea,button { width:100%; padding:10px; margin:5px 0; border-radius:10px; border:none; font-size:1rem;}
+button { cursor:pointer; font-weight:bold; transition:0.2s;}
+.submit-btn { background-color:#fff;color:#0072ff; font-weight:bold;}
+.submit-btn:hover { opacity:0.8;}
+.feedback { font-weight:bold; margin-top:5px;}
 </style>
 </head>
 <body>
 <div class="container">
-<h1>Welcome to the Beach House</h1>
-<div class="dashboard">
-  <h2 id="welcomeMessage"></h2>
-  <div class="calendar" id="calendar"></div>
-  
-  <div class="work-request">
-    <h3>Submit a Work Request</h3>
-    <textarea id="requestText" placeholder="Describe the issue..." rows="3"></textarea>
-    <button class="submit-btn" id="submitRequestBtn">Submit Request</button>
-    <span class="feedback" id="feedback"></span>
-  </div>
+<h1>Beach House Guest Dashboard v2.0</h1>
+
+<h2 id="welcomeMessage"></h2>
+<div class="calendar" id="calendar"></div>
+
+<div class="work-request">
+  <textarea id="requestText" placeholder="Describe an issue..." rows="3"></textarea>
+  <button class="submit-btn" id="submitRequestBtn">Submit Request</button>
+  <span class="feedback" id="guestFeedback"></span>
 </div>
 </div>
 
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-// --- Supabase config ---
 const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// --- Elements ---
 const welcomeMessage = document.getElementById('welcomeMessage');
 const calendarEl = document.getElementById('calendar');
 const requestText = document.getElementById('requestText');
 const submitRequestBtn = document.getElementById('submitRequestBtn');
-const feedback = document.getElementById('feedback');
+const guestFeedback = document.getElementById('guestFeedback');
 
-let currentGuest = null;
-const today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+let currentGuest=null;
+const today = new Date().toISOString().slice(0,10);
 
-// --- Load today's guest ---
 async function loadGuest(){
-  const { data, error } = await supabase
-    .from('guests')
+  const { data, error } = await supabase.from('guests')
     .select('*')
     .gte('start_date', today)
     .lte('end_date', today)
@@ -66,12 +58,16 @@ async function loadGuest(){
     .limit(1)
     .single();
 
-  if(error || !data){ welcomeMessage.textContent='No scheduled guest for today.'; return; }
+  if(error || !data){ 
+    welcomeMessage.textContent='No guest scheduled today.';
+    submitRequestBtn.disabled=true;
+    return;
+  }
+
   currentGuest = data;
+  welcomeMessage.textContent=`Welcome, ${currentGuest.guest_last_name}s!`;
 
-  welcomeMessage.textContent = `Welcome, ${currentGuest.guest_last_name}s!`;
-
-  // Automatically check in if first day
+  // Auto check-in if first day
   if(!currentGuest.checked_in_dates.includes(today)){
     await markCheckedIn();
   }
@@ -80,21 +76,15 @@ async function loadGuest(){
   scheduleMidnightSignOut();
 }
 
-// --- Mark check-in ---
 async function markCheckedIn(){
   let updatedDates = currentGuest.checked_in_dates || [];
   if(!updatedDates.includes(today)) updatedDates.push(today);
 
-  const { error } = await supabase
-    .from('guests')
-    .update({ checked_in_dates: updatedDates })
-    .eq('id', currentGuest.id);
-
-  if(error) return console.error('Error checking in:', error);
-  currentGuest.checked_in_dates = updatedDates;
+  const { error } = await supabase.from('guests').update({checked_in_dates:updatedDates}).eq('id',currentGuest.id);
+  if(error) return console.error('Error checking in:',error);
+  currentGuest.checked_in_dates=updatedDates;
 }
 
-// --- Render calendar ---
 function renderCalendar(){
   calendarEl.innerHTML='';
   const start = new Date(currentGuest.start_date);
@@ -106,36 +96,27 @@ function renderCalendar(){
     div.className='day';
     if(dayStr===today) div.classList.add('today');
     if(currentGuest.checked_in_dates.includes(dayStr)) div.classList.add('checked-in');
-    div.textContent = d.getDate();
+    div.textContent = d.toLocaleDateString('en-US');
     calendarEl.appendChild(div);
   }
 }
 
-// --- Submit work request ---
 submitRequestBtn.addEventListener('click', async ()=>{
+  if(!currentGuest){ guestFeedback.textContent='You must be checked in first.'; return; }
   const text = requestText.value.trim();
-  if(!text){ feedback.textContent='Enter a request.'; return; }
+  if(!text){ guestFeedback.textContent='Enter a request.'; return; }
 
-  const { error } = await supabase.from('work_requests').insert([{
-    guest_id: currentGuest.id,
-    request_text: text
-  }]);
-
-  if(error){ feedback.textContent='Error submitting request.'; console.error(error); }
-  else { feedback.textContent='Request submitted!'; requestText.value=''; }
+  const { error } = await supabase.from('work_requests').insert([{guest_id:currentGuest.id,request_text:text}]);
+  if(error){ guestFeedback.textContent='Error submitting request.'; console.error(error);}
+  else { guestFeedback.textContent='Request submitted!'; requestText.value=''; }
 });
 
-// --- Automatic midnight sign-out ---
 function scheduleMidnightSignOut(){
-  const now = new Date();
-  const msUntilMidnight = new Date(now.getFullYear(),now.getMonth(),now.getDate()+1)-now;
-  setTimeout(()=>{
-    feedback.textContent = 'You have been signed out for the day.';
-    scheduleMidnightSignOut();
-  }, msUntilMidnight);
+  const now=new Date();
+  const msUntilMidnight=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1)-now;
+  setTimeout(()=>{ guestFeedback.textContent='You have been signed out for the day.'; scheduleMidnightSignOut(); }, msUntilMidnight);
 }
 
-// --- Init ---
 loadGuest();
 </script>
 </body>
