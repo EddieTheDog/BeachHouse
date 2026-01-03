@@ -17,6 +17,7 @@ button { cursor:pointer; font-weight:bold; transition:0.2s;}
 .submit-btn { background-color:#fff;color:#0072ff; font-weight:bold;}
 .submit-btn:hover { opacity:0.8;}
 .feedback { font-weight:bold; margin-top:5px;}
+.hidden { display:none; }
 </style>
 </head>
 <body>
@@ -26,7 +27,7 @@ button { cursor:pointer; font-weight:bold; transition:0.2s;}
 <h2 id="welcomeMessage"></h2>
 <div class="calendar" id="calendar"></div>
 
-<div class="work-request">
+<div class="work-request hidden" id="workRequestSection">
   <textarea id="requestText" placeholder="Describe an issue..." rows="3"></textarea>
   <button class="submit-btn" id="submitRequestBtn">Submit Request</button>
   <span class="feedback" id="guestFeedback"></span>
@@ -45,29 +46,30 @@ const calendarEl = document.getElementById('calendar');
 const requestText = document.getElementById('requestText');
 const submitRequestBtn = document.getElementById('submitRequestBtn');
 const guestFeedback = document.getElementById('guestFeedback');
+const workRequestSection = document.getElementById('workRequestSection');
 
-let currentGuest=null;
+let currentGuest = null;
 const today = new Date().toISOString().slice(0,10);
 
 async function loadGuest(){
   const { data, error } = await supabase.from('guests')
     .select('*')
-    .gte('start_date', today)
     .lte('end_date', today)
+    .gte('start_date', today)
     .eq('active', true)
     .limit(1)
     .single();
 
-  if(error || !data){ 
+  if(error || !data){
     welcomeMessage.textContent='No guest scheduled today.';
-    submitRequestBtn.disabled=true;
+    workRequestSection.classList.add('hidden');
     return;
   }
 
   currentGuest = data;
   welcomeMessage.textContent=`Welcome, ${currentGuest.guest_last_name}s!`;
+  workRequestSection.classList.remove('hidden');
 
-  // Auto check-in if first day
   if(!currentGuest.checked_in_dates.includes(today)){
     await markCheckedIn();
   }
@@ -81,8 +83,8 @@ async function markCheckedIn(){
   if(!updatedDates.includes(today)) updatedDates.push(today);
 
   const { error } = await supabase.from('guests').update({checked_in_dates:updatedDates}).eq('id',currentGuest.id);
-  if(error) return console.error('Error checking in:',error);
-  currentGuest.checked_in_dates=updatedDates;
+  if(error) console.error('Error checking in:', error);
+  currentGuest.checked_in_dates = updatedDates;
 }
 
 function renderCalendar(){
