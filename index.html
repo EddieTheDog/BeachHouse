@@ -12,7 +12,7 @@ input, textarea { width:100%; padding:8px; border-radius:5px; border:1px solid #
 .message-app { border:1px solid #00aaff; border-radius:6px; padding:10px; max-height:200px; overflow-y:auto; background:white;}
 .hidden { display:none; }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.37.0/dist/supabase.min.js"></script>
 </head>
 <body>
 <header>Beach House Guest Dashboard</header>
@@ -41,15 +41,17 @@ input, textarea { width:100%; padding:8px; border-radius:5px; border:1px solid #
 
 <script>
 window.addEventListener('DOMContentLoaded', async () => {
-    const supabaseUrl = 'https://ofnlpqfscyecatetnuqi.supabase.co';
-    const supabaseKey = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-    window.supabase = window.supabase || supabase.createClient(supabaseUrl, supabaseKey);
+    // Initialize Supabase
+    window.supabase = window.supabase || supabase.createClient(
+        'https://ofnlpqfscyecatetnuqi.supabase.co',
+        'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc'
+    );
 
     let guestData;
 
     async function loadGuest() {
         const today = new Date().toISOString().split('T')[0];
-        const { data } = await supabase
+        const { data } = await window.supabase
             .from('guests')
             .select('*')
             .lte('end_date', today)
@@ -87,7 +89,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function loadMessages(){
-        const { data } = await supabase
+        const { data } = await window.supabase
             .from('messages')
             .select('*')
             .eq('guest_id', guestData.id)
@@ -102,19 +104,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     document.getElementById('yes-btn').onclick = async ()=>{
-        await supabase.from('guests').update({verification_status:'verified', checked_in:true}).eq('id', guestData.id);
+        await window.supabase.from('guests').update({verification_status:'verified', checked_in:true}).eq('id', guestData.id);
         document.getElementById('checkin-section').classList.add('hidden');
         document.getElementById('guest-actions').classList.remove('hidden');
         loadGuestDetails();
     }
 
     document.getElementById('no-btn').onclick = async ()=>{
-        await supabase.from('guests').update({verification_status:'locked'}).eq('id', guestData.id);
+        await window.supabase.from('guests').update({verification_status:'locked'}).eq('id', guestData.id);
         document.getElementById('checkin-section').innerHTML = "<p>Tablet locked, contact host.</p>";
     }
 
     document.getElementById('checkout-btn').onclick = async ()=>{
-        await supabase.from('guests').update({active:false}).eq('id',guestData.id);
+        await window.supabase.from('guests').update({active:false}).eq('id',guestData.id);
         alert("You have checked out!");
         location.reload();
     }
@@ -126,7 +128,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('submit-request-btn').onclick = async ()=>{
         const text = document.getElementById('request-text').value;
         if(!text) return;
-        await supabase.from('work_requests').insert({guest_id:guestData.id,request_text:text});
+        await window.supabase.from('work_requests').insert({guest_id:guestData.id,request_text:text});
         document.getElementById('request-text').value="";
         document.getElementById('work-request-form').classList.add('hidden');
         alert("Work request submitted!");
@@ -135,7 +137,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('send-message-btn').onclick = async ()=>{
         const text = document.getElementById('new-message').value;
         if(!text) return;
-        await supabase.from('messages').insert({guest_id:guestData.id,message_text:text});
+        await window.supabase.from('messages').insert({guest_id:guestData.id,message_text:text});
         document.getElementById('new-message').value="";
         loadMessages();
     }
