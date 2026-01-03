@@ -3,70 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Guest Dashboard v2.4</title>
+<title>Beach House Guest Dashboard v2.7</title>
 <style>
-html,body {height:100%;margin:0;padding:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#00c6ff,#0072ff);color:#fff;overflow-x:hidden;}
-.container {max-width:900px;margin:0 auto;padding:20px;height:100%;display:flex;flex-direction:column;justify-content:flex-start;}
-h1,h2,h3 {text-align:center;margin-bottom:20px;}
-#time {text-align:center;font-size:1.2rem;margin-bottom:10px;}
-.calendar {display:flex;flex-wrap:wrap;justify-content:center;margin:20px 0;flex-grow:0;}
-.day {width:70px;height:60px;margin:5px;display:flex;justify-content:center;align-items:center;border-radius:10px;background-color:rgba(255,255,255,0.2);font-weight:bold;}
-.today {border:3px solid #fff;}
-.checked-in {background-color:#00ff6a;color:#000;}
-button {cursor:pointer;font-weight:bold;padding:10px 15px;border-radius:10px;border:none;margin:5px;transition:0.2s;}
-#requestBtn {background-color:#fff;color:#0072ff;}
-#requestBtn:hover {opacity:0.8;}
-#messageBtn {background-color:#fffa00;color:#000;}
-#messageBtn:hover {opacity:0.8;}
-.feedback {font-weight:bold;margin-top:5px;text-align:center;}
-.modal-bg {display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);justify-content:center;align-items:center;z-index:10;}
-.modal {background:#fff;color:#000;padding:20px;border-radius:15px;max-width:400px;width:90%;display:flex;flex-direction:column;}
-.modal textarea, .modal input {width:100%;padding:10px;margin:5px 0;border-radius:10px;border:1px solid #ccc;}
-.modal button {margin-top:10px;}
+html,body{height:100%;margin:0;padding:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#0072ff,#00c6ff);color:#fff;display:flex;justify-content:center;align-items:center;}
+.container{width:100%;max-width:600px;padding:20px;text-align:center;}
+button,input,textarea{padding:10px;margin:5px;border-radius:10px;border:none;}
+button{cursor:pointer;font-weight:bold;}
+.modal-bg{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);justify-content:center;align-items:center;z-index:10;}
+.modal{background:#fff;color:#000;padding:20px;border-radius:15px;width:90%;max-width:400px;display:flex;flex-direction:column;}
 </style>
 </head>
 <body>
 <div class="container">
-<h1>Beach House Guest Dashboard v2.4</h1>
-<div id="time"></div>
-<h2 id="welcomeMessage"></h2>
-<h3 id="daysLeft"></h3>
-<div class="calendar" id="calendar"></div>
+<h1>Beach House Dashboard v2.7</h1>
+<div id="welcome"></div>
 
-<div style="text-align:center;">
-<button id="requestBtn" disabled>Submit Work Request</button>
-<button id="messageBtn" disabled>Message Host</button>
+<div id="mainContent" style="display:none;">
+<h3>Work Requests</h3>
+<textarea id="workRequestText" placeholder="Describe your request"></textarea><br>
+<button id="submitWorkRequest">Submit Work Request</button>
+<ul id="workRequestsList"></ul>
+
+<h3>Messages</h3>
+<textarea id="guestMessageText" placeholder="Message host"></textarea><br>
+<button id="submitGuestMessage">Send Message</button>
+<ul id="messagesList"></ul>
+
+<div id="checkoutDiv" style="margin-top:20px;">
+<button id="checkoutBtn" style="display:none;">I’m Leaving</button>
 </div>
 
-<div class="feedback" id="guestFeedback"></div>
-
-<!-- Work Request Modal -->
-<div class="modal-bg" id="workModal">
-  <div class="modal">
-    <h3>Submit Work Request</h3>
-    <textarea id="requestText" placeholder="Describe the issue..." rows="4"></textarea>
-    <button id="submitRequestBtn">Send Request</button>
-    <button id="closeWorkModal">Cancel</button>
-  </div>
+<p id="status"></p>
 </div>
-
-<!-- Message Modal -->
-<div class="modal-bg" id="messageModal">
-  <div class="modal">
-    <h3>Message Host</h3>
-    <textarea id="messageText" placeholder="Your message..." rows="4"></textarea>
-    <button id="sendMessageBtn">Send</button>
-    <button id="closeMessageModal">Cancel</button>
-  </div>
-</div>
-
-<!-- Verification Modal -->
-<div class="modal-bg" id="verifyModal">
-  <div class="modal">
-    <h3 id="verifyText">Welcome to the Beach House! Is this you?</h3>
-    <button id="verifyYes">Yes</button>
-    <button id="verifyNo">No</button>
-  </div>
 </div>
 
 <script type="module">
@@ -76,194 +44,116 @@ const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const welcomeMessage = document.getElementById('welcomeMessage');
-const daysLeftEl = document.getElementById('daysLeft');
-const calendarEl = document.getElementById('calendar');
-const guestFeedback = document.getElementById('guestFeedback');
+let guest = null;
 
-let currentGuest = null;
-const today = new Date().toISOString().slice(0,10);
+// Initialize guest session
+async function initGuest(){
+  const today = new Date().toISOString().slice(0,10);
+  const { data, error } = await supabase.from('guests').select('*').eq('active',true).lte('start_date',today).gte('end_date',today);
+  if(error){console.error(error);return;}
+  if(data.length===0){document.getElementById('welcome').innerText="No scheduled guests today";return;}
+  guest = data[0];
 
-// Buttons & Modals
-const requestBtn = document.getElementById('requestBtn');
-const workModal = document.getElementById('workModal');
-const closeWorkModal = document.getElementById('closeWorkModal');
-const submitRequestBtn = document.getElementById('submitRequestBtn');
-const requestText = document.getElementById('requestText');
-
-const messageBtn = document.getElementById('messageBtn');
-const messageModal = document.getElementById('messageModal');
-const closeMessageModal = document.getElementById('closeMessageModal');
-const sendMessageBtn = document.getElementById('sendMessageBtn');
-const messageText = document.getElementById('messageText');
-
-const verifyModal = document.getElementById('verifyModal');
-const verifyText = document.getElementById('verifyText');
-const verifyYes = document.getElementById('verifyYes');
-const verifyNo = document.getElementById('verifyNo');
-
-// --- Load Guest ---
-async function loadGuest(){
-  const { data, error } = await supabase.from('guests')
-    .select('*')
-    .lte('start_date', today)
-    .gte('end_date', today)
-    .eq('active', true)
-    .order('start_date', { ascending:true });
-
-  if(error || !data || data.length === 0){
-    welcomeMessage.textContent='No guest scheduled today.';
-    daysLeftEl.textContent='';
-    calendarEl.innerHTML='';
-    requestBtn.disabled = true;
-    messageBtn.disabled = true;
-    return;
-  }
-
-  currentGuest = data[0];
-
-  // Reset verification if new day
-  if(currentGuest.verification_date !== today){
-    await supabase.from('guests').update({
-      verification_status: 'pending',
-      verification_date: today
-    }).eq('id', currentGuest.id);
-    currentGuest.verification_status = 'pending';
-    currentGuest.verification_date = today;
-  }
-
-  if(currentGuest.verification_status === 'locked'){
-    welcomeMessage.textContent='Please contact the host for assistance.';
-    requestBtn.disabled = true;
-    messageBtn.disabled = true;
-    return;
-  }
-
-  if(currentGuest.verification_status === 'pending'){
-    verifyText.textContent = `Welcome to the Beach House! Is this ${currentGuest.guest_last_name}s?`;
-    verifyModal.style.display='flex';
+  if(!guest.verification_date){
+    showWelcomeModal();
   } else {
-    showDashboard();
+    document.getElementById('mainContent').style.display='block';
+    loadWorkRequests();
+    loadMessages();
+    checkCheckoutButton();
+  }
+}
+initGuest();
+
+// Welcome modal
+function showWelcomeModal(){
+  const modalBg = document.createElement('div'); modalBg.className='modal-bg';
+  const modal = document.createElement('div'); modal.className='modal';
+  modal.innerHTML = `<h2>Welcome ${guest.guest_last_name}${guest.guest_last_name.endsWith('s')?'':'s'}</h2>
+  <p>Is this you?</p>
+  <button id="yesBtn">Yes</button>
+  <button id="noBtn">No</button>`;
+  modalBg.appendChild(modal); document.body.appendChild(modalBg);
+  modalBg.style.display='flex';
+  document.getElementById('yesBtn').onclick = async ()=>{
+    await supabase.from('guests').update({verification_status:'verified',verification_date:new Date().toISOString()}).eq('id',guest.id);
+    document.body.removeChild(modalBg);
+    document.getElementById('mainContent').style.display='block';
+    loadWorkRequests(); loadMessages(); checkCheckoutButton();
+  }
+  document.getElementById('noBtn').onclick = ()=>{
+    alert("Please contact host to unlock"); modalBg.style.display='none';
   }
 }
 
-// --- Verification ---
-verifyYes.addEventListener('click', async ()=>{
-  verifyModal.style.display='none';
-  await supabase.from('guests').update({
-    verification_status: 'confirmed'
-  }).eq('id', currentGuest.id);
-  currentGuest.verification_status = 'confirmed';
-  showDashboard();
-});
+// Work requests
+const submitWorkRequest = document.getElementById('submitWorkRequest');
+const workRequestText = document.getElementById('workRequestText');
+const workRequestsList = document.getElementById('workRequestsList');
 
-verifyNo.addEventListener('click', async ()=>{
-  verifyModal.style.display='none';
-  await supabase.from('guests').update({
-    verification_status: 'locked'
-  }).eq('id', currentGuest.id);
-  currentGuest.verification_status = 'locked';
-  welcomeMessage.textContent='Please contact the host for assistance.';
-});
+submitWorkRequest.onclick = async ()=>{
+  if(!workRequestText.value.trim()){return;}
+  await supabase.from('work_requests').insert([{guest_id:guest.id,request_text:workRequestText.value.trim(),date:new Date().toISOString()}]);
+  workRequestText.value='';
+  loadWorkRequests();
+}
 
-// --- Dashboard Show ---
-async function showDashboard(){
-  welcomeMessage.textContent=`Welcome, ${currentGuest.guest_last_name}s!`;
-  requestBtn.disabled = false;
-  messageBtn.disabled = false;
+async function loadWorkRequests(){
+  const { data } = await supabase.from('work_requests').select('*').eq('guest_id',guest.id).order('date',{ascending:true});
+  workRequestsList.innerHTML='';
+  data.forEach(r=>{const li=document.createElement('li'); li.textContent=`${r.request_text} (${new Date(r.date).toLocaleString()})`; workRequestsList.appendChild(li);});
+}
 
-  const end = new Date(currentGuest.end_date);
+// Messages
+const submitGuestMessage = document.getElementById('submitGuestMessage');
+const guestMessageText = document.getElementById('guestMessageText');
+const messagesList = document.getElementById('messagesList');
+
+submitGuestMessage.onclick = async ()=>{
+  if(!guestMessageText.value.trim()) return;
+  await supabase.from('messages').insert([{guest_id:guest.id,message_text:guestMessageText.value.trim(),date:new Date().toISOString()}]);
+  guestMessageText.value='';
+  loadMessages();
+}
+
+async function loadMessages(){
+  const { data } = await supabase.from('messages').select('*').eq('guest_id',guest.id).order('date',{ascending:true});
+  messagesList.innerHTML='';
+  data.forEach(m=>{const li=document.createElement('li'); li.textContent=`${m.message_text} (${new Date(m.date).toLocaleString()})`; messagesList.appendChild(li);});
+}
+
+// Checkout
+function checkCheckoutButton(){
+  const today = new Date().toISOString().slice(0,10);
+  if(today===guest.end_date){
+    document.getElementById('checkoutBtn').style.display='inline-block';
+  }
+}
+
+document.getElementById('checkoutBtn').onclick = async ()=>{
+  await checkoutGuest();
+}
+
+async function checkoutGuest(){
+  await supabase.from('guests').update({active:false}).eq('id',guest.id);
+  await supabase.from('work_requests').delete().eq('guest_id',guest.id);
+  await supabase.from('messages').delete().eq('guest_id',guest.id);
+  alert("You are checked out. Goodbye!");
+  location.reload();
+}
+
+// Automatic checkout at midnight
+setInterval(async ()=>{
   const now = new Date();
-  const diff = Math.ceil((end - now)/(1000*60*60*24)) + 1;
-  daysLeftEl.textContent=`Days left: ${diff}`;
-
-  if(!currentGuest.checked_in_dates.includes(today)){
-    await markCheckedIn();
-  }
-
-  renderCalendar();
-  scheduleMidnightSignOut();
-}
-
-// --- Check-in ---
-async function markCheckedIn(){
-  let updatedDates = currentGuest.checked_in_dates || [];
-  if(!updatedDates.includes(today)) updatedDates.push(today);
-  const { error } = await supabase.from('guests').update({checked_in_dates:updatedDates}).eq('id', currentGuest.id);
-  if(error) console.error('Error checking in:', error);
-  currentGuest.checked_in_dates = updatedDates;
-}
-
-// --- Calendar ---
-function renderCalendar(){
-  calendarEl.innerHTML='';
-  const start = new Date(currentGuest.start_date);
-  const end = new Date(currentGuest.end_date);
-  for(let d = new Date(start); d <= end; d.setDate(d.getDate()+1)){
-    const dayStr = d.toISOString().slice(0,10);
-    const div = document.createElement('div');
-    div.className='day';
-    if(dayStr===today) div.classList.add('today');
-    if(currentGuest.checked_in_dates.includes(dayStr)) div.classList.add('checked-in');
-    div.textContent = d.toLocaleDateString('en-US');
-    calendarEl.appendChild(div);
-  }
-}
-
-// --- Work Request Modal ---
-requestBtn.addEventListener('click', ()=>{ workModal.style.display='flex'; });
-closeWorkModal.addEventListener('click', ()=>{ workModal.style.display='none'; requestText.value=''; });
-submitRequestBtn.addEventListener('click', async ()=>{
-  const text = requestText.value.trim();
-  if(!text){ guestFeedback.textContent='Enter a request.'; return; }
-  const { error } = await supabase.from('work_requests').insert([{guest_id:currentGuest.id, request_text:text}]);
-  if(error){ guestFeedback.textContent='Error submitting request.'; console.error(error);}
-  else { guestFeedback.textContent='Request submitted!'; requestText.value=''; workModal.style.display='none'; }
-});
-
-// --- Message Modal ---
-messageBtn.addEventListener('click', ()=>{ messageModal.style.display='flex'; });
-closeMessageModal.addEventListener('click', ()=>{ messageModal.style.display='none'; messageText.value=''; });
-sendMessageBtn.addEventListener('click', async ()=>{
-  const text = messageText.value.trim();
-  if(!text){ guestFeedback.textContent='Enter a message.'; return; }
-  const { error } = await supabase.from('messages').insert([{guest_id:currentGuest.id, message_text:text}]);
-  if(error){ guestFeedback.textContent='Error sending message.'; console.error(error);}
-  else { guestFeedback.textContent='Message sent!'; messageText.value=''; messageModal.style.display='none'; }
-});
-
-// --- Midnight sign out & auto-delete past guests/messages ---
-function scheduleMidnightSignOut(){
-  const now=new Date();
-  const msUntilMidnight=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1)-now;
-  setTimeout(async ()=>{
-    await cleanupPastGuests();
-    guestFeedback.textContent='You have been signed out for the day.';
-    scheduleMidnightSignOut();
-  }, msUntilMidnight);
-}
-
-async function cleanupPastGuests(){
-  const todayStr = new Date().toISOString().slice(0,10);
-  const { data: oldGuests } = await supabase.from('guests').select('id').lt('end_date', todayStr);
-  if(oldGuests && oldGuests.length>0){
-    for(let g of oldGuests){
-      await supabase.from('messages').delete().eq('guest_id', g.id);
-      await supabase.from('work_requests').delete().eq('guest_id', g.id);
-      await supabase.from('guests').delete().eq('id', g.id);
+  if(now.getHours()===0 && now.getMinutes()===0){
+    if(guest){
+      const today = now.toISOString().slice(0,10);
+      if(today > guest.end_date){
+        await checkoutGuest();
+      }
     }
   }
-}
-
-// --- Time Display ---
-function updateTime(){
-  const now = new Date();
-  document.getElementById('time').textContent = now.toLocaleTimeString();
-}
-setInterval(updateTime, 1000);
-updateTime();
-
-loadGuest();
+},60000);
 </script>
 </body>
 </html>
