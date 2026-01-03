@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Guest Dashboard v2.8</title>
+<title>Beach House Guest Dashboard v2.9</title>
 <style>
 html,body{height:100%;margin:0;padding:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#0072ff,#00c6ff);color:#fff;}
 .container{width:95%;max-width:600px;margin:auto;padding:20px;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;}
@@ -48,23 +48,22 @@ button:hover{background:#003f7f;}
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
+const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqY14kS9ng_Ivuq-Pjc';
 const supabase = createClient(SUPABASE_URL,SUPABASE_KEY);
 
-let guest=null; // current guest
+let guest=null;
 const messagesDiv = document.getElementById('messages');
 const welcomeMessage = document.getElementById('welcomeMessage');
 const datesDiv = document.getElementById('dates');
 
-// Get today's guest
 async function loadGuest(){
   const today = new Date().toISOString().slice(0,10);
-  const { data } = await supabase.from('guests').select('*').gte('start_date',today).lte('end_date',today).order('start_date',{ascending:true});
+  const { data } = await supabase.from('guests').select('*').lte('end_date',today).gte('start_date',today).eq('active',true).order('start_date',{ascending:true});
   if(data.length===0){
     welcomeMessage.innerText="No scheduled guests today.";
     return;
   }
-  guest = data[0]; // take first guest
+  guest = data[0];
   const start = new Date(guest.start_date);
   const end = new Date(guest.end_date);
   const daysLeft = Math.ceil((end-new Date())/(1000*60*60*24))+1;
@@ -74,7 +73,6 @@ async function loadGuest(){
 }
 loadGuest();
 
-// Load messages
 async function loadMessages(){
   if(!guest) return;
   const { data } = await supabase.from('messages').select('*').eq('guest_id',guest.id).order('date',{ascending:true});
@@ -89,12 +87,12 @@ async function loadMessages(){
 
 // Work Request popup
 const popupOverlay=document.getElementById('popupOverlay');
-document.getElementById('submitRequestBtn').onclick=()=>{popupOverlay.style.display='flex';}
+document.getElementById('submitRequestBtn').onclick=()=>{if(!guest){alert("No guest today");return;} popupOverlay.style.display='flex';}
 document.getElementById('cancelPopupBtn').onclick=()=>{popupOverlay.style.display='none';}
 document.getElementById('sendRequestBtn').onclick=async()=>{
   const text=document.getElementById('requestText').value.trim();
   if(!text){alert("Enter a request"); return;}
-  await supabase.from('work_requests').insert([{guest_id:guest.id,request_text:text}]);
+  await supabase.from('work_requests').insert([{guest_id:guest.id,request_text:text,date:new Date().toISOString()}]);
   document.getElementById('requestText').value='';
   popupOverlay.style.display='none';
   alert("Work request sent!");
@@ -102,6 +100,7 @@ document.getElementById('sendRequestBtn').onclick=async()=>{
 
 // Checkout
 document.getElementById('checkoutBtn').onclick=async()=>{
+  if(!guest) return;
   if(!confirm("Are you leaving? This will check you out.")) return;
   await supabase.from('guests').update({active:false}).eq('id',guest.id);
   await supabase.from('work_requests').delete().eq('guest_id',guest.id);
@@ -112,8 +111,8 @@ document.getElementById('checkoutBtn').onclick=async()=>{
 
 // Auto cleanup at midnight
 setInterval(async()=>{
-  const today=new Date().toISOString().slice(0,10);
   if(!guest) return;
+  const today=new Date().toISOString().slice(0,10);
   if(today>guest.end_date){
     await supabase.from('guests').update({active:false}).eq('id',guest.id);
     await supabase.from('work_requests').delete().eq('guest_id',guest.id);
