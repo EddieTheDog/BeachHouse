@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Admin</title>
+<title>Beach House Admin v1.0</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <style>
   body { font-family: system-ui, sans-serif; background: #fff8e1; padding: 20px; min-height: 100vh; }
@@ -17,14 +17,17 @@
     box-shadow: 1px 1px 5px rgba(0,0,0,0.1);
   }
   .request p { margin: 3px 0; }
+  footer { margin-top: 20px; font-size: 0.8rem; color: #555; text-align: center; }
 </style>
 </head>
 <body>
 
-<h1>All Work Requests</h1>
+<h1>All Work Requests v1.0</h1>
 <div id="requests">Loading...</div>
+<footer>Version 1.0</footer>
 
 <script>
+document.addEventListener('DOMContentLoaded', () => {
   const supabaseUrl = 'https://ofnlpqfscyecatetnuqi.supabase.co';
   const supabaseKey = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
   const supabase = supabase.createClient(supabaseUrl, supabaseKey);
@@ -48,6 +51,7 @@
   }
 
   loadRequests();
+});
 </script>
 
 </body>
