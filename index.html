@@ -2,126 +2,141 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Guest Dashboard v2.9</title>
+<title>Beach House Guest Dashboard v3.0</title>
 <style>
-html,body{height:100%;margin:0;padding:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#0072ff,#00c6ff);color:#fff;}
-.container{width:95%;max-width:600px;margin:auto;padding:20px;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;}
-h1,h2{text-align:center;text-shadow:1px 1px 5px rgba(0,0,0,0.3);}
-button,input,textarea{padding:10px;margin:5px;border-radius:10px;border:none;}
-button{cursor:pointer;font-weight:bold;background:#005dbf;color:#fff;transition:.3s;width:100%;}
-button:hover{background:#003f7f;}
-#messages{width:100%;max-height:300px;overflow-y:auto;margin-top:10px;background:rgba(0,0,0,0.2);border-radius:10px;padding:10px;}
-.message{background:rgba(255,255,255,0.2);margin:5px 0;padding:8px;border-radius:10px;word-wrap:break-word;}
-.message.admin{background:rgba(0,0,0,0.3);}
-#workRequests{margin-top:10px;width:100%;}
-#dates{margin-top:10px;width:100%;text-align:center;font-weight:bold;}
-#popupOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:none;justify-content:center;align-items:center;}
-#popup{background:#00c6ff;color:#000;padding:20px;border-radius:15px;width:80%;max-width:400px;display:flex;flex-direction:column;}
-#popup input, #popup textarea{width:100%;margin-bottom:10px;}
+body { margin:0; padding:0; font-family: Arial; background:#e0f7ff; display:flex; flex-direction:column; align-items:center; min-height:100vh;}
+header { width:100%; background:#00aaff; color:white; padding:15px; text-align:center; font-size:24px;}
+main { flex:1; width:100%; max-width:600px; padding:20px; display:flex; flex-direction:column; gap:15px;}
+button { background:#00aaff; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer;}
+input, textarea { width:100%; padding:8px; border-radius:5px; border:1px solid #ccc;}
+.message-app { border:1px solid #00aaff; border-radius:6px; padding:10px; max-height:200px; overflow-y:auto; background:white;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<div class="container">
-<h1>Welcome to the Beach House</h1>
-<p id="welcomeMessage"></p>
-<div id="dates"></div>
-<div id="messages"></div>
+<header>Beach House Dashboard v3.0</header>
+<main>
+<div id="welcome"></div>
 
-<div id="workRequests">
-<button id="submitRequestBtn">Submit Work Request</button>
+<div id="checkin-section" style="display:none;">
+    <p>Welcome to the Beach House! Is this you?</p>
+    <button id="yes-btn">Yes</button>
+    <button id="no-btn">No</button>
 </div>
 
-<button id="checkoutBtn">I'm Leaving</button>
+<div id="guest-actions" style="display:none;">
+    <p>Days left: <span id="days-left"></span></p>
+    <button id="checkout-btn">I'm Leaving</button>
+    <button id="work-request-btn">Submit Work Request</button>
+    <div id="work-request-form" style="display:none;">
+        <textarea id="request-text" placeholder="Describe your work request"></textarea>
+        <button id="submit-request-btn">Submit</button>
+    </div>
+
+    <div class="message-app" id="messages"></div>
+    <textarea id="new-message" placeholder="Send a message to host"></textarea>
+    <button id="send-message-btn">Send</button>
 </div>
 
-<!-- Popup for Work Request -->
-<div id="popupOverlay">
-<div id="popup">
-<h3>Submit Work Request</h3>
-<textarea id="requestText" placeholder="Describe your request..."></textarea>
-<button id="sendRequestBtn">Send Request</button>
-<button id="cancelPopupBtn">Cancel</button>
-</div>
-</div>
+<script>
+const supabaseUrl = 'https://ofnlpqfscyecatetnuqi.supabase.co';
+const supabaseKey = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-<script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqY14kS9ng_Ivuq-Pjc';
-const supabase = createClient(SUPABASE_URL,SUPABASE_KEY);
+let guestData;
 
-let guest=null;
-const messagesDiv = document.getElementById('messages');
-const welcomeMessage = document.getElementById('welcomeMessage');
-const datesDiv = document.getElementById('dates');
+async function loadGuest() {
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await supabase
+        .from('guests')
+        .select('*')
+        .lte('end_date', today)
+        .gte('start_date', today)
+        .eq('active', true)
+        .order('start_date', { ascending:true });
 
-async function loadGuest(){
-  const today = new Date().toISOString().slice(0,10);
-  const { data } = await supabase.from('guests').select('*').lte('end_date',today).gte('start_date',today).eq('active',true).order('start_date',{ascending:true});
-  if(data.length===0){
-    welcomeMessage.innerText="No scheduled guests today.";
-    return;
-  }
-  guest = data[0];
-  const start = new Date(guest.start_date);
-  const end = new Date(guest.end_date);
-  const daysLeft = Math.ceil((end-new Date())/(1000*60*60*24))+1;
-  welcomeMessage.innerText=`Welcome ${guest.guest_last_name}${daysLeft>1?'s':''}!`;
-  datesDiv.innerText=`Stay: ${guest.start_date} → ${guest.end_date} (${daysLeft} day${daysLeft>1?'s':''} left)`;
-  loadMessages();
+    const welcomeDiv = document.getElementById('welcome');
+    if(!data || data.length===0){
+        welcomeDiv.innerText = "No scheduled guests today.";
+        return;
+    }
+
+    guestData = data[0];
+    const checkinSection = document.getElementById('checkin-section');
+    const guestActions = document.getElementById('guest-actions');
+
+    if(guestData.verification_status === 'pending'){
+        checkinSection.style.display = 'block';
+        document.getElementById('yes-btn').onclick = async ()=>{
+            await supabase.from('guests').update({verification_status:'verified', checked_in:true}).eq('id', guestData.id);
+            checkinSection.style.display='none';
+            guestActions.style.display='block';
+            loadGuestDetails();
+        }
+        document.getElementById('no-btn').onclick = async ()=>{
+            await supabase.from('guests').update({verification_status:'locked'}).eq('id', guestData.id);
+            checkinSection.innerHTML = "<p>Tablet locked, contact host.</p>";
+        }
+    } else if(guestData.verification_status === 'verified'){
+        guestActions.style.display='block';
+        loadGuestDetails();
+    } else if(guestData.verification_status === 'locked'){
+        checkinSection.innerHTML = "<p>Tablet locked, contact host.</p>";
+    }
 }
-loadGuest();
+
+function loadGuestDetails(){
+    const today = new Date();
+    const end = new Date(guestData.end_date);
+    const diff = Math.ceil((end-today)/(1000*60*60*24));
+    document.getElementById('days-left').innerText = diff>=0 ? diff : 0;
+    loadMessages();
+}
 
 async function loadMessages(){
-  if(!guest) return;
-  const { data } = await supabase.from('messages').select('*').eq('guest_id',guest.id).order('date',{ascending:true});
-  messagesDiv.innerHTML='';
-  data.forEach(m=>{
-    const div=document.createElement('div');
-    div.className='message admin';
-    div.innerText=m.message_text;
-    messagesDiv.appendChild(div);
-  });
+    const { data } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('guest_id', guestData.id)
+        .order('date', {ascending:true});
+    const messagesDiv = document.getElementById('messages');
+    messagesDiv.innerHTML = "";
+    data.forEach(m=>{
+        const p = document.createElement('p');
+        p.innerText = m.message_text;
+        messagesDiv.appendChild(p);
+    });
 }
 
-// Work Request popup
-const popupOverlay=document.getElementById('popupOverlay');
-document.getElementById('submitRequestBtn').onclick=()=>{if(!guest){alert("No guest today");return;} popupOverlay.style.display='flex';}
-document.getElementById('cancelPopupBtn').onclick=()=>{popupOverlay.style.display='none';}
-document.getElementById('sendRequestBtn').onclick=async()=>{
-  const text=document.getElementById('requestText').value.trim();
-  if(!text){alert("Enter a request"); return;}
-  await supabase.from('work_requests').insert([{guest_id:guest.id,request_text:text,date:new Date().toISOString()}]);
-  document.getElementById('requestText').value='';
-  popupOverlay.style.display='none';
-  alert("Work request sent!");
+document.getElementById('send-message-btn').onclick = async ()=>{
+    const text = document.getElementById('new-message').value;
+    if(!text) return;
+    await supabase.from('messages').insert({guest_id:guestData.id,message_text:text});
+    document.getElementById('new-message').value="";
+    loadMessages();
 }
 
-// Checkout
-document.getElementById('checkoutBtn').onclick=async()=>{
-  if(!guest) return;
-  if(!confirm("Are you leaving? This will check you out.")) return;
-  await supabase.from('guests').update({active:false}).eq('id',guest.id);
-  await supabase.from('work_requests').delete().eq('guest_id',guest.id);
-  await supabase.from('messages').delete().eq('guest_id',guest.id);
-  alert("Checked out. Thank you!");
-  location.reload();
+document.getElementById('work-request-btn').onclick = ()=>{
+    document.getElementById('work-request-form').style.display='block';
 }
 
-// Auto cleanup at midnight
-setInterval(async()=>{
-  if(!guest) return;
-  const today=new Date().toISOString().slice(0,10);
-  if(today>guest.end_date){
-    await supabase.from('guests').update({active:false}).eq('id',guest.id);
-    await supabase.from('work_requests').delete().eq('guest_id',guest.id);
-    await supabase.from('messages').delete().eq('guest_id',guest.id);
-    alert("Your stay is over. Checked out automatically.");
+document.getElementById('submit-request-btn').onclick = async ()=>{
+    const text = document.getElementById('request-text').value;
+    if(!text) return;
+    await supabase.from('work_requests').insert({guest_id:guestData.id,request_text:text});
+    document.getElementById('request-text').value="";
+    document.getElementById('work-request-form').style.display='none';
+    alert("Work request submitted!");
+}
+
+document.getElementById('checkout-btn').onclick = async ()=>{
+    await supabase.from('guests').update({active:false}).eq('id',guestData.id);
+    alert("You have checked out!");
     location.reload();
-  }
-},60000);
+}
 
+window.onload = loadGuest;
 </script>
+</main>
 </body>
 </html>
