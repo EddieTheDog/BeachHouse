@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Dashboard</title>
+<title>Beach House Dashboard v1.0</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <style>
   body {
@@ -39,11 +39,12 @@
   }
   button:hover { background: #005fa3; }
   #confirmation { color: green; margin-top: 10px; text-align: center; }
+  footer { margin-top: 30px; font-size: 0.8rem; color: #555; }
 </style>
 </head>
 <body>
 
-<h1>Beach House Dashboard</h1>
+<h1>Beach House Dashboard v1.0</h1>
 <div class="weather" id="weather">Loading weather...</div>
 
 <form id="requestForm">
@@ -54,8 +55,10 @@
 </form>
 
 <div id="confirmation"></div>
+<footer>Version 1.0</footer>
 
 <script>
+document.addEventListener('DOMContentLoaded', () => {
   // =================== SUPABASE SETUP ===================
   const supabaseUrl = 'https://ofnlpqfscyecatetnuqi.supabase.co';
   const supabaseKey = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
@@ -97,6 +100,7 @@
   }
 
   getWeather();
+});
 </script>
 
 </body>
