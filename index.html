@@ -1,47 +1,200 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Beach House Guest Dashboard v2.2</title>
-<style>
-body { margin:0; font-family:Arial; background:#e0f7ff; display:flex; flex-direction:column; min-height:100vh;}
-header { background:#00aaff; color:white; padding:15px; text-align:center; font-size:24px;}
-main { flex:1; max-width:600px; margin:auto; padding:20px; display:flex; flex-direction:column; gap:15px;}
-button { background:#00aaff; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer;}
-input, textarea { width:100%; padding:8px; border-radius:5px; border:1px solid #ccc;}
-.message-app { border:1px solid #00aaff; border-radius:6px; padding:10px; max-height:200px; overflow-y:auto; background:white;}
-.hidden { display:none; }
-</style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GuestHub | Beach House</title>
+    <style>
+        :root {
+            --ios-blue: #007AFF;
+            --ios-bg: #f2f2f7;
+            --ios-card: #ffffff;
+            --ios-gray: #8e8e93;
+            --danger: #ff3b30;
+        }
+
+        body { 
+            margin: 0; 
+            font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto; 
+            background-color: var(--ios-bg);
+            color: #000;
+            padding-bottom: 90px;
+        }
+
+        /* App Shell */
+        #app-header {
+            padding: 50px 20px 20px;
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
+            color: white;
+            border-bottom-left-radius: 30px;
+            border-bottom-right-radius: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .header-title { font-size: 28px; font-weight: 800; margin: 0; }
+        .header-date { opacity: 0.8; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+
+        main { padding: 20px; max-width: 500px; margin: 0 auto; }
+
+        /* Card System */
+        .card {
+            background: var(--ios-card);
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        /* Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            border-top: 0.5px solid #ccc;
+            padding: 10px 0 25px;
+            z-index: 1000;
+        }
+
+        .nav-btn {
+            flex: 1;
+            text-align: center;
+            background: none;
+            border: none;
+            color: var(--ios-gray);
+            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .nav-btn.active { color: var(--ios-blue); font-weight: bold; }
+        .nav-icon { font-size: 20px; }
+
+        /* Messaging UI */
+        #chat-window {
+            height: 350px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 5px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 15px;
+            position: relative;
+        }
+
+        .message.guest {
+            align-self: flex-end;
+            background-color: var(--ios-blue);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.host {
+            align-self: flex-start;
+            background-color: #e9e9eb;
+            color: black;
+            border-bottom-left-radius: 4px;
+        }
+
+        .timestamp {
+            font-size: 10px;
+            margin-top: 4px;
+            opacity: 0.7;
+            display: block;
+        }
+
+        /* Verification Screen */
+        #verification-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--ios-bg);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+        }
+
+        .btn-primary { background: var(--ios-blue); color: white; border: none; padding: 15px; border-radius: 12px; width: 100%; font-weight: 600; cursor: pointer; }
+        .btn-outline { background: none; border: 1px solid var(--ios-gray); color: var(--ios-gray); padding: 15px; border-radius: 12px; width: 100%; margin-top: 10px; cursor: pointer; }
+
+        .hidden { display: none !important; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
 </head>
 <body>
-<header>Beach House Guest Dashboard</header>
-<main>
-<div id="welcome"></div>
 
-<div id="checkin-section" class="hidden">
-    <p>Welcome to the Beach House! Is this you?</p>
-    <button id="yes-btn">Yes</button>
-    <button id="no-btn">No</button>
-</div>
-
-<div id="guest-actions" class="hidden">
-    <p>Days left: <span id="days-left"></span></p>
-    <button id="checkout-btn">I'm Leaving</button>
-    <button id="work-request-btn">Submit Work Request</button>
-    <div id="work-request-form" class="hidden">
-        <textarea id="request-text" placeholder="Describe your work request"></textarea>
-        <button id="submit-request-btn">Submit</button>
+<div id="verification-overlay" class="hidden">
+    <div class="card" style="text-align: center; width: 100%;">
+        <h2 id="verify-title">Welcome!</h2>
+        <p id="verify-msg">Is this the <strong><span id="name-placeholder">---</span></strong> family?</p>
+        <button class="btn-primary" id="btn-verify-yes">Yes, that's us</button>
+        <button class="btn-outline" id="btn-verify-no">No, this is wrong</button>
     </div>
-
-    <div class="message-app" id="messages"></div>
-    <textarea id="new-message" placeholder="Send a message to host"></textarea>
-    <button id="send-message-btn">Send</button>
 </div>
+
+<header id="app-header">
+    <div class="header-date" id="current-date">Saturday, Jan 3</div>
+    <h1 class="header-title">GuestHub</h1>
+</header>
+
+<main id="main-content">
+    <section id="tab-home" class="tab-view">
+        <div class="card" style="background: #fff9e6; border-left: 5px solid #ffcc00;">
+            <h4 style="margin:0">📢 Announcement</h4>
+            <p style="font-size: 14px; margin: 8px 0 0;">Check-out is at 11:00 AM. Please ensure the balcony door is locked before leaving. Have a great stay!</p>
+        </div>
+
+        <div class="card">
+            <h3>House Details</h3>
+            <p><strong>Wifi:</strong> BeachGuest_5G</p>
+            <p><strong>Password:</strong> sandcastle2026</p>
+        </div>
+    </section>
+
+    <section id="tab-chat" class="tab-view hidden">
+        <div class="card">
+            <div id="chat-window"></div>
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <input type="text" id="chat-input" placeholder="Text message" style="flex:1; border: 1px solid #ddd; border-radius: 20px; padding: 10px 15px;">
+                <button id="btn-send" style="background: var(--ios-blue); color:white; border:none; width:40px; height:40px; border-radius:50%;">↑</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="tab-services" class="tab-view hidden">
+        <div class="card">
+            <h3>Maintenance</h3>
+            <textarea id="service-input" rows="3" placeholder="Describe the issue..."></textarea>
+            <button class="btn-primary" id="btn-submit-service" style="margin-top:10px;">Submit Request</button>
+        </div>
+        <button class="btn-outline" id="btn-checkout" style="color: var(--danger); border-color: var(--danger);">Checkout Early</button>
+    </section>
+</main>
+
+<nav class="bottom-nav" id="app-nav">
+    <button class="nav-btn active" onclick="showTab('home', this)">
+        <span class="nav-icon">🏠</span>Home
+    </button>
+    <button class="nav-btn" onclick="showTab('chat', this)">
+        <span class="nav-icon">💬</span>Messages
+    </button>
+    <button class="nav-btn" onclick="showTab('services', this)">
+        <span class="nav-icon">🛠️</span>Services
+    </button>
+</nav>
 
 <script>
-window.addEventListener('DOMContentLoaded', async () => {
-    // Initialize Supabase
     const supabaseClient = supabase.createClient(
         'https://ofnlpqfscyecatetnuqi.supabase.co',
         'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc'
@@ -49,140 +202,124 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     let guestData = null;
 
-    // Load guest scheduled for today (or currently in-house)
-    async function loadGuest() {
-        const today = new Date().toISOString().split('T')[0];
+    async function init() {
+        // Display Current Date
+        const options = { weekday: 'long', month: 'short', day: 'numeric' };
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', options);
 
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Fetch guest by date
         const { data, error } = await supabaseClient
             .from('guests')
             .select('*')
-            .lte('start_date', today)   // start_date <= today
-            .gte('end_date', today)     // end_date >= today
+            .lte('start_date', today)
+            .gte('end_date', today)
             .eq('active', true)
-            .order('start_date', { ascending: true });
+            .maybeSingle();
 
-        const welcomeDiv = document.getElementById('welcome');
-        const checkinSection = document.getElementById('checkin-section');
-        const guestActions = document.getElementById('guest-actions');
-
-        // Hide all sections initially
-        checkinSection.classList.add('hidden');
-        guestActions.classList.add('hidden');
-        welcomeDiv.innerText = "";
-
-        if(error) {
-            welcomeDiv.innerText = "Error loading guest info.";
-            console.error(error);
+        if (error || !data) {
+            document.body.innerHTML = "<div style='padding:50px; text-align:center;'>No active guest found for today.</div>";
             return;
         }
 
-        if(!data || data.length === 0) {
-            welcomeDiv.innerText = "No guests scheduled today.";
-            return;
+        guestData = data;
+
+        // Check Verification Status
+        if (guestData.verification_status === 'pending') {
+            document.getElementById('verification-overlay').classList.remove('hidden');
+            document.getElementById('name-placeholder').innerText = guestData.last_name;
+        } else if (guestData.verification_status === 'locked') {
+            showLockedScreen();
         }
 
-        guestData = data[0];
-
-        if(guestData.verification_status === 'pending'){
-            checkinSection.classList.remove('hidden');
-        } else if(guestData.verification_status === 'verified'){
-            guestActions.classList.remove('hidden');
-            loadGuestDetails();
-        } else if(guestData.verification_status === 'locked'){
-            checkinSection.innerHTML = "<p>Tablet locked, contact host.</p>";
-        }
-    }
-
-    // Show days left & messages
-    function loadGuestDetails() {
-        const today = new Date();
-        const end = new Date(guestData.end_date);
-        const diff = Math.ceil((end - today)/(1000*60*60*24)) + 1;
-        document.getElementById('days-left').innerText = diff >= 0 ? diff : 0;
         loadMessages();
+        subscribeToMessages();
     }
 
-    // Load guest messages
+    // Tab Switching Logic
+    function showTab(tabId, btn) {
+        document.querySelectorAll('.tab-view').forEach(t => t.classList.add('hidden'));
+        document.getElementById('tab-' + tabId).classList.remove('hidden');
+        
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        if(tabId === 'chat') {
+            const win = document.getElementById('chat-window');
+            win.scrollTop = win.scrollHeight;
+        }
+    }
+
+    // Message Handling
     async function loadMessages() {
-        if(!guestData) return;
-        const { data } = await supabaseClient
-            .from('messages')
+        const { data } = await supabaseClient.from('messages')
             .select('*')
             .eq('guest_id', guestData.id)
             .order('created_at', { ascending: true });
 
-        const messagesDiv = document.getElementById('messages');
-        messagesDiv.innerHTML = "";
-        if(!data) return;
-        data.forEach(m => {
-            const p = document.createElement('p');
-            p.innerText = m.message_text;
-            messagesDiv.appendChild(p);
-        });
+        const window = document.getElementById('chat-window');
+        window.innerHTML = data.map(m => {
+            const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return `
+                <div class="message ${m.sender_type === 'host' ? 'host' : 'guest'}">
+                    ${m.message_text}
+                    <span class="timestamp">${time}</span>
+                </div>
+            `;
+        }).join('');
+        window.scrollTop = window.scrollHeight;
     }
 
-    // --- Event handlers ---
-    document.getElementById('yes-btn').onclick = async () => {
-        if(!guestData) return;
-        await supabaseClient
-            .from('guests')
-            .update({ verification_status:'verified', checked_in:true })
-            .eq('id', guestData.id);
-        document.getElementById('checkin-section').classList.add('hidden');
-        document.getElementById('guest-actions').classList.remove('hidden');
-        loadGuestDetails();
+    function subscribeToMessages() {
+        supabaseClient.channel('realtime-msgs').on('postgres_changes', 
+            { event: 'INSERT', schema: 'public', table: 'messages', filter: `guest_id=eq.${guestData.id}` }, 
+            () => loadMessages()
+        ).subscribe();
+    }
+
+    // Button Actions
+    document.getElementById('btn-verify-yes').onclick = async () => {
+        await supabaseClient.from('guests').update({ verification_status: 'verified', checked_in: true }).eq('id', guestData.id);
+        document.getElementById('verification-overlay').classList.add('hidden');
     };
 
-    document.getElementById('no-btn').onclick = async () => {
-        if(!guestData) return;
-        await supabaseClient
-            .from('guests')
-            .update({ verification_status:'locked' })
-            .eq('id', guestData.id);
-        document.getElementById('checkin-section').innerHTML = "<p>Tablet locked, contact host.</p>";
+    document.getElementById('btn-verify-no').onclick = async () => {
+        await supabaseClient.from('guests').update({ verification_status: 'locked' }).eq('id', guestData.id);
+        showLockedScreen();
     };
 
-    document.getElementById('checkout-btn').onclick = async () => {
-        if(!guestData) return;
-        await supabaseClient
-            .from('guests')
-            .update({ active:false })
-            .eq('id', guestData.id);
-        alert("You have checked out!");
-        location.reload();
+    document.getElementById('btn-send').onclick = async () => {
+        const input = document.getElementById('chat-input');
+        if (!input.value.trim()) return;
+        await supabaseClient.from('messages').insert({ 
+            guest_id: guestData.id, 
+            message_text: input.value, 
+            sender_type: 'guest' 
+        });
+        input.value = '';
     };
 
-    document.getElementById('work-request-btn').onclick = () => {
-        document.getElementById('work-request-form').classList.remove('hidden');
-    };
-
-    document.getElementById('submit-request-btn').onclick = async () => {
-        if(!guestData) return;
-        const text = document.getElementById('request-text').value.trim();
+    document.getElementById('btn-submit-service').onclick = async () => {
+        const text = document.getElementById('service-input').value;
         if(!text) return;
-        await supabaseClient
-            .from('work_requests')
-            .insert({ guest_id: guestData.id, request_text: text });
-        document.getElementById('request-text').value = "";
-        document.getElementById('work-request-form').classList.add('hidden');
-        alert("Work request submitted!");
+        await supabaseClient.from('work_requests').insert({ guest_id: guestData.id, request_text: text });
+        alert("Maintenance has been notified.");
+        document.getElementById('service-input').value = '';
     };
 
-    document.getElementById('send-message-btn').onclick = async () => {
-        if(!guestData) return;
-        const text = document.getElementById('new-message').value.trim();
-        if(!text) return;
-        await supabaseClient
-            .from('messages')
-            .insert({ guest_id: guestData.id, message_text: text });
-        document.getElementById('new-message').value = "";
-        loadMessages();
-    };
+    function showLockedScreen() {
+        const overlay = document.getElementById('verification-overlay');
+        overlay.classList.remove('hidden');
+        overlay.innerHTML = `
+            <div class="card" style="text-align:center;">
+                <h2 style="color:var(--danger);">Tablet Locked</h2>
+                <p>For security, access has been restricted. Please contact the property manager to unlock this device.</p>
+            </div>
+        `;
+    }
 
-    // Initial load
-    loadGuest();
-});
+    init();
 </script>
-</main>
 </body>
 </html>
