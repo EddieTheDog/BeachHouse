@@ -13,13 +13,32 @@
     flex-direction: column;
     align-items: center;
     padding: 20px;
+    min-height: 100vh;
   }
-  h1 { margin-bottom: 10px; }
+  h1 { margin-bottom: 15px; }
   .weather { margin-bottom: 20px; font-size: 1.2rem; }
-  form { display: flex; flex-direction: column; gap: 10px; width: 300px; }
-  input, textarea, button { padding: 10px; font-size: 1rem; width: 100%; border-radius: 5px; border: 1px solid #ccc; }
-  button { cursor: pointer; background: #0077cc; color: white; border: none; }
-  #confirmation { color: green; margin-top: 10px; }
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 320px;
+  }
+  input, textarea, button {
+    padding: 10px;
+    font-size: 1rem;
+    width: 100%;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
+  button {
+    cursor: pointer;
+    background: #0077cc;
+    color: white;
+    border: none;
+    transition: background 0.3s;
+  }
+  button:hover { background: #005fa3; }
+  #confirmation { color: green; margin-top: 10px; text-align: center; }
 </style>
 </head>
 <body>
@@ -33,10 +52,11 @@
   <textarea id="request" placeholder="Work Request" required></textarea>
   <button type="submit">Submit Request</button>
 </form>
+
 <div id="confirmation"></div>
 
 <script>
-  // === Supabase Setup ===
+  // =================== SUPABASE SETUP ===================
   const supabaseUrl = 'https://ofnlpqfscyecatetnuqi.supabase.co';
   const supabaseKey = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
   const supabase = supabase.createClient(supabaseUrl, supabaseKey);
@@ -52,17 +72,17 @@
 
     try {
       await supabase.from('work_requests').insert([{ name, room, request: requestText, status: 'Pending' }]);
-      confirmation.innerText = "Request submitted!";
+      confirmation.innerText = "✅ Request submitted!";
       form.reset();
     } catch (err) {
-      confirmation.innerText = "Error submitting request.";
       console.error(err);
+      confirmation.innerText = "❌ Error submitting request";
     }
   });
 
-  // === OpenWeatherMap API for Orange County ===
+  // =================== WEATHER ===================
   const weatherEl = document.getElementById('weather');
-  const apiKey = 'YOUR_OPENWEATHERMAP_API_KEY'; // Replace with your free key
+  const apiKey = 'YOUR_OPENWEATHERMAP_API_KEY'; // Replace with your OpenWeatherMap API key
   const location = 'Orange County, US';
 
   async function getWeather() {
@@ -71,11 +91,13 @@
       const data = await res.json();
       weatherEl.innerText = `Weather: ${data.main.temp}°F, ${data.weather[0].description}`;
     } catch (err) {
+      console.error(err);
       weatherEl.innerText = 'Weather unavailable';
     }
   }
 
   getWeather();
 </script>
+
 </body>
 </html>
