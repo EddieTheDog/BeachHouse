@@ -1,45 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>My Website</title>
-
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <style>
-    body {
-      margin: 0;
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #0b0b0b;
-      color: white;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-
-    .box {
-      text-align: center;
-      padding: 40px;
-      border-radius: 12px;
-      background: #141414;
-      box-shadow: 0 0 40px rgba(0,0,0,0.5);
-    }
-
-    h1 {
-      margin: 0 0 10px;
-      font-size: 2.5rem;
-    }
-
-    p {
-      opacity: 0.7;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beach House Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<style>
+  body {
+    font-family: system-ui, sans-serif;
+    background: #f0f8ff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  h1 { margin-bottom: 10px; }
+  .weather { margin-bottom: 20px; font-size: 1.2rem; }
+  form { display: flex; flex-direction: column; gap: 10px; width: 300px; }
+  input, textarea, button { padding: 10px; font-size: 1rem; width: 100%; }
+  button { cursor: pointer; background: #0077cc; color: white; border: none; border-radius: 5px; }
+  #confirmation { color: green; margin-top: 10px; }
+</style>
 </head>
 <body>
-  <div class="box">
-    <h1>It Works 🚀</h1>
-    <p>Your Cloudflare Pages site is live.</p>
-  </div>
+
+<h1>Beach House Dashboard</h1>
+<div class="weather" id="weather">Loading weather...</div>
+
+<form id="requestForm">
+  <input type="text" id="name" placeholder="Your Name" required>
+  <input type="text" id="room" placeholder="Room / Unit #" required>
+  <textarea id="request" placeholder="Work Request" required></textarea>
+  <button type="submit">Submit Request</button>
+</form>
+<div id="confirmation"></div>
+
+<script>
+  // === Supabase Setup ===
+  const supabaseUrl = 'YOUR_SUPABASE_URL';
+  const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
+  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+  const form = document.getElementById('requestForm');
+  const confirmation = document.getElementById('confirmation');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('name').value;
+    const room = document.getElementById('room').value;
+    const requestText = document.getElementById('request').value;
+
+    await supabase.from('work_requests').insert([{ name, room, request: requestText, status: 'Pending' }]);
+    confirmation.innerText = "Request submitted!";
+    form.reset();
+  });
+
+  // === OpenWeatherMap API for Orange County ===
+  const weatherEl = document.getElementById('weather');
+  const apiKey = 'YOUR_OPENWEATHERMAP_API_KEY';
+  const location = 'Orange County, US';
+
+  async function getWeather() {
+    try {
+      const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location)}&units=imperial&appid=${apiKey}`);
+      const data = await res.json();
+      weatherEl.innerText = `Weather: ${data.main.temp}°F, ${data.weather[0].description}`;
+    } catch (err) {
+      weatherEl.innerText = 'Weather unavailable';
+    }
+  }
+
+  getWeather();
+</script>
 </body>
 </html>
