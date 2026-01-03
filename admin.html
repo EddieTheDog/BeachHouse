@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Admin v1.1</title>
+<title>Beach House Admin v1.2</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <style>
   body { font-family: system-ui, sans-serif; background: #fff8e1; padding: 20px; min-height: 100vh; }
@@ -15,20 +15,20 @@
 </head>
 <body>
 
-<h1>All Work Requests v1.1</h1>
+<h1>All Work Requests v1.2</h1>
 <div id="requests">Loading...</div>
-<footer>Version 1.1</footer>
+<footer>Version 1.2</footer>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const supabaseUrl = 'https://ofnlpqfscyecatetnuqi.supabase.co';
   const supabaseKey = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+  const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
   const requestsEl = document.getElementById('requests');
 
   async function loadRequests() {
-    const { data } = await supabase.from('work_requests').select('*').order('id', { ascending: false });
+    const { data } = await supabaseClient.from('work_requests').select('*').order('id', { ascending: false });
     if (!data || data.length === 0) {
       requestsEl.innerText = 'No requests yet';
       return;
