@@ -3,61 +3,247 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Dashboard v1.2</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<title>Beach House Guest Dashboard v1.6</title>
 <style>
-  body { font-family: system-ui, sans-serif; background: #e0f7fa; display: flex; flex-direction: column; align-items: center; padding: 20px; min-height: 100vh; }
-  h1 { margin-bottom: 15px; }
-  form { display: flex; flex-direction: column; gap: 10px; width: 320px; }
-  input, textarea, button { padding: 10px; font-size: 1rem; width: 100%; border-radius: 5px; border: 1px solid #ccc; }
-  button { cursor: pointer; background: #0077cc; color: white; border: none; transition: background 0.3s; }
-  button:hover { background: #005fa3; }
-  #confirmation { color: green; margin-top: 10px; text-align: center; }
-  footer { margin-top: 30px; font-size: 0.8rem; color: #555; }
+  body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #00c6ff, #0072ff);
+    color: #fff;
+  }
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  h1 { text-align: center; margin-bottom: 10px; }
+  #welcomeScreen, #dashboard { display: none; }
+  button {
+    padding: 15px 30px;
+    margin: 10px;
+    font-size: 1.2rem;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  button:hover { opacity: 0.8; }
+  .yes { background-color: #00ff6a; color: #000; }
+  .no { background-color: #ff4d4d; color: #000; }
+  .checkin { background-color: #fff; color: #0072ff; }
+  .signout { background-color: #ffcc00; color: #000; }
+  .calendar {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 20px 0;
+  }
+  .day {
+    width: 60px;
+    height: 60px;
+    margin: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 10px;
+    background-color: rgba(255,255,255,0.2);
+  }
+  .today { border: 3px solid #fff; font-weight: bold; }
+  .checked-in { background-color: #00ff6a; color: #000; }
+  .work-request {
+    display: flex;
+    flex-direction: column;
+    margin-top: 20px;
+  }
+  input, textarea {
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 10px;
+    border: none;
+    font-size: 1rem;
+  }
 </style>
 </head>
 <body>
+<div class="container">
+  <h1>Beach House Guest Dashboard v1.6</h1>
 
-<h1>Beach House Dashboard v1.2</h1>
+  <!-- Welcome Screen -->
+  <div id="welcomeScreen">
+    <h2 id="welcomeMessage"></h2>
+    <p>Are you here?</p>
+    <button class="yes" id="yesBtn">Yes</button>
+    <button class="no" id="noBtn">No</button>
+  </div>
 
-<form id="requestForm">
-  <input type="text" id="name" placeholder="Your Name" required>
-  <input type="text" id="room" placeholder="Room / Unit #" required>
-  <textarea id="request" placeholder="Work Request" required></textarea>
-  <button type="submit">Submit Request</button>
-</form>
+  <!-- Dashboard -->
+  <div id="dashboard">
+    <div>
+      <button class="checkin" id="checkinBtn">Check In ✅</button>
+      <button class="signout" id="signoutBtn">Sign Out</button>
+    </div>
 
-<div id="confirmation"></div>
-<footer>Version 1.2</footer>
+    <!-- Calendar -->
+    <div class="calendar" id="calendar"></div>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  // =================== SUPABASE SETUP ===================
-  const supabaseUrl = 'https://ofnlpqfscyecatetnuqi.supabase.co';
-  const supabaseKey = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-  const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    <!-- Work Request Form -->
+    <div class="work-request">
+      <h3>Submit a Work Request</h3>
+      <textarea id="requestText" placeholder="Describe the issue..." rows="3"></textarea>
+      <button class="checkin" id="submitRequestBtn">Submit Request</button>
+    </div>
+  </div>
+</div>
 
-  // =================== FORM SUBMISSION ===================
-  const form = document.getElementById('requestForm');
-  const confirmation = document.getElementById('confirmation');
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const name = document.getElementById('name').value;
-    const room = document.getElementById('room').value;
-    const requestText = document.getElementById('request').value;
+// Supabase credentials
+const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    try {
-      await supabaseClient.from('work_requests').insert([{ name, room, request: requestText, status: 'Pending' }]);
-      confirmation.innerText = "✅ Request submitted!";
-      form.reset();
-    } catch (err) {
-      console.error(err);
-      confirmation.innerText = "❌ Error submitting request";
-    }
-  });
+// Elements
+const welcomeScreen = document.getElementById('welcomeScreen');
+const dashboard = document.getElementById('dashboard');
+const welcomeMessage = document.getElementById('welcomeMessage');
+const yesBtn = document.getElementById('yesBtn');
+const noBtn = document.getElementById('noBtn');
+const checkinBtn = document.getElementById('checkinBtn');
+const signoutBtn = document.getElementById('signoutBtn');
+const calendarEl = document.getElementById('calendar');
+const requestText = document.getElementById('requestText');
+const submitRequestBtn = document.getElementById('submitRequestBtn');
+
+let currentGuest = null;
+let today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+
+// Load today's scheduled guest
+async function loadGuest() {
+  const { data, error } = await supabase
+    .from('guests')
+    .select('*')
+    .gte('start_date', today)
+    .lte('end_date', today)
+    .eq('active', true)
+    .limit(1)
+    .single();
+
+  if(error || !data){
+    alert('No scheduled guest for today.');
+    return;
+  }
+
+  currentGuest = data;
+
+  // Determine if first day
+  const isFirstDay = currentGuest.checked_in_dates.length === 0 || !currentGuest.checked_in_dates.includes(today);
+
+  if(isFirstDay){
+    welcomeMessage.textContent = `Welcome, ${currentGuest.guest_last_name}s!`;
+    welcomeScreen.style.display = 'block';
+  } else {
+    showDashboard();
+  }
+
+  renderCalendar();
+}
+
+// Show dashboard
+function showDashboard() {
+  welcomeScreen.style.display = 'none';
+  dashboard.style.display = 'block';
+  checkinBtn.disabled = currentGuest.checked_in_dates.includes(today);
+}
+
+// Handle welcome buttons
+yesBtn.addEventListener('click', async () => {
+  await markCheckedIn();
+  showDashboard();
 });
-</script>
 
+noBtn.addEventListener('click', () => {
+  alert('Please contact the admin.');
+});
+
+// Mark check-in
+async function markCheckedIn() {
+  let updatedDates = currentGuest.checked_in_dates || [];
+  if(!updatedDates.includes(today)) updatedDates.push(today);
+
+  const { error } = await supabase
+    .from('guests')
+    .update({ checked_in_dates: updatedDates })
+    .eq('id', currentGuest.id);
+
+  if(error) alert('Error checking in.');
+  else {
+    currentGuest.checked_in_dates = updatedDates;
+    renderCalendar();
+    alert('Checked in successfully!');
+  }
+}
+
+// Check-in button
+checkinBtn.addEventListener('click', markCheckedIn);
+
+// Sign-out button
+signoutBtn.addEventListener('click', async () => {
+  // For simplicity, just mark as signed out in checked_in_dates if needed
+  alert('Signed out. Have a great day!');
+  dashboard.style.display = 'none';
+  welcomeScreen.style.display = 'block';
+});
+
+// Submit work request
+submitRequestBtn.addEventListener('click', async () => {
+  const text = requestText.value.trim();
+  if(!text) return alert('Please enter a request.');
+
+  const { error } = await supabase.from('work_requests').insert([{
+    guest_id: currentGuest.id,
+    request_text: text
+  }]);
+
+  if(error) alert('Error submitting request.');
+  else {
+    alert('Request submitted!');
+    requestText.value = '';
+  }
+});
+
+// Render calendar
+function renderCalendar() {
+  calendarEl.innerHTML = '';
+  const start = new Date(currentGuest.start_date);
+  const end = new Date(currentGuest.end_date);
+
+  for(let d = new Date(start); d <= end; d.setDate(d.getDate()+1)){
+    const dayStr = d.toISOString().slice(0,10);
+    const div = document.createElement('div');
+    div.className = 'day';
+    if(dayStr === today) div.classList.add('today');
+    if(currentGuest.checked_in_dates.includes(dayStr)) div.classList.add('checked-in');
+    div.textContent = d.getDate();
+    calendarEl.appendChild(div);
+  }
+}
+
+// Auto sign-out at midnight
+function scheduleMidnightSignOut() {
+  const now = new Date();
+  const msUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1) - now;
+  setTimeout(() => {
+    signoutBtn.click();
+    scheduleMidnightSignOut(); // schedule next day
+  }, msUntilMidnight);
+}
+
+// Init
+loadGuest();
+scheduleMidnightSignOut();
+
+</script>
 </body>
 </html>
