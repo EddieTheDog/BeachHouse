@@ -16,7 +16,7 @@ th,td{border:1px solid #0077cc;padding:6px;text-align:left;}
 .tab-content { display:none; }
 .tab-content.active { display:block; }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.37.0/dist/supabase.min.js"></script>
 </head>
 <body>
 <header>Beach House Admin</header>
@@ -66,9 +66,11 @@ th,td{border:1px solid #0077cc;padding:6px;text-align:left;}
 
 <script>
 window.addEventListener('DOMContentLoaded', async () => {
-    const supabaseUrl='https://ofnlpqfscyecatetnuqi.supabase.co';
-    const supabaseKey='sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-    window.supabase = window.supabase || supabase.createClient(supabaseUrl,supabaseKey);
+    // Initialize Supabase
+    window.supabase = window.supabase || supabase.createClient(
+        'https://ofnlpqfscyecatetnuqi.supabase.co',
+        'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc'
+    );
 
     const tabs = document.querySelectorAll('.tab');
     const tabContents = document.querySelectorAll('.tab-content');
@@ -81,7 +83,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     tabs[0].click(); // activate first tab
 
     async function loadGuests(){
-        const {data}=await supabase.from('guests').select('*').order('start_date',{ascending:true});
+        const {data} = await window.supabase.from('guests').select('*').order('start_date',{ascending:true});
         const tbody=document.querySelector('#guest-table tbody');
         tbody.innerHTML="";
         data.forEach(g=>{
@@ -96,7 +98,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function loadWorkRequests(){
-        const {data}=await supabase.from('work_requests').select('*,guest_id(guest_last_name)').order('created_at',{ascending:true});
+        const {data} = await window.supabase.from('work_requests').select('*,guest_id(guest_last_name)').order('created_at',{ascending:true});
         const tbody=document.querySelector('#work-table tbody');
         tbody.innerHTML="";
         data.forEach(w=>{
@@ -107,7 +109,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function loadMessages(){
-        const {data}=await supabase.from('messages').select('*,guest_id(guest_last_name)').order('created_at',{ascending:true});
+        const {data} = await window.supabase.from('messages').select('*,guest_id(guest_last_name)').order('created_at',{ascending:true});
         const tbody=document.querySelector('#message-table tbody');
         tbody.innerHTML="";
         data.forEach(m=>{
@@ -118,17 +120,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     window.cancelGuest = async (id)=>{
-        await supabase.from('guests').delete().eq('id',id);
+        await window.supabase.from('guests').delete().eq('id',id);
         loadGuests();
     }
 
     window.extendGuest = async (id)=>{
         const days = prompt("Enter number of days to extend:");
         if(!days || isNaN(days)) return;
-        const guest=await supabase.from('guests').select('*').eq('id',id).single();
+        const guest=await window.supabase.from('guests').select('*').eq('id',id).single();
         let newEnd=new Date(guest.data.end_date);
         newEnd.setDate(newEnd.getDate()+parseInt(days));
-        await supabase.from('guests').update({end_date:newEnd.toISOString().split('T')[0]}).eq('id',id);
+        await window.supabase.from('guests').update({end_date:newEnd.toISOString().split('T')[0]}).eq('id',id);
         loadGuests();
     }
 
@@ -137,7 +139,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const sd=document.getElementById('start-date').value;
         const ed=document.getElementById('end-date').value;
         if(!ln || !sd || !ed) return alert("Fill all fields");
-        await supabase.from('guests').insert({guest_last_name:ln,start_date:sd,end_date:ed});
+        await window.supabase.from('guests').insert({guest_last_name:ln,start_date:sd,end_date:ed,verification_status:'pending',active:true});
         document.getElementById('guest-lastname').value="";
         document.getElementById('start-date').value="";
         document.getElementById('end-date').value="";
@@ -145,11 +147,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     document.getElementById('lock-btn').onclick=async ()=>{
-        await supabase.from('controls').update({tablet_locked:true}).eq('id',1);
+        await window.supabase.from('controls').update({tablet_locked:true}).eq('id',1);
         alert("Tablet locked");
     }
     document.getElementById('unlock-btn').onclick=async ()=>{
-        await supabase.from('controls').update({tablet_locked:false}).eq('id',1);
+        await window.supabase.from('controls').update({tablet_locked:false}).eq('id',1);
         alert("Tablet unlocked");
     }
 
