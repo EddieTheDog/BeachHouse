@@ -18,11 +18,11 @@
 
 <div id="login-screen">
     <div class="text-center mb-10">
-        <h1 id="welcome-title" class="text-5xl font-black mb-2 tracking-tighter">Welcome</h1>
+        <h1 class="text-5xl font-black mb-2 tracking-tighter">Welcome</h1>
         <p id="instruction-text" class="text-slate-500 font-bold uppercase tracking-widest text-xs">Enter your 6-digit access code</p>
     </div>
     
-    <div class="flex gap-4 mb-10">
+    <div class="flex gap-4 mb-10" id="dot-container">
         <div class="pin-dot" id="dot-0"></div>
         <div class="pin-dot" id="dot-1"></div>
         <div class="pin-dot" id="dot-2"></div>
@@ -49,23 +49,24 @@
 
 <div id="main-app" class="hidden">
     <div class="max-w-xl mx-auto p-4 md:p-8">
-        <header class="flex justify-between items-end mb-8">
-            <h1 class="text-3xl font-black text-slate-900 leading-none tracking-tighter">The Beach House</h1>
-            <button onclick="logout()" class="text-[10px] font-bold text-slate-400 border border-slate-300 px-3 py-1 rounded-full">EXIT</button>
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-black tracking-tighter">The Beach House</h1>
+            <button onclick="location.reload()" class="bg-slate-200 px-4 py-1 rounded-full text-[10px] font-bold">LOGOUT</button>
         </header>
 
         <main class="space-y-4">
-            <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
-                <h2 class="text-2xl font-bold mb-1" id="portal-welcome"></h2>
-                <div id="calendar" class="grid grid-cols-7 gap-2 pt-4 mt-4 border-t border-slate-100"></div>
+            <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200">
+                <h2 class="text-3xl font-bold mb-1" id="portal-welcome"></h2>
+                <p id="stay-dates" class="text-slate-400 text-sm font-medium"></p>
+                <div id="calendar" class="grid grid-cols-7 gap-2 mt-6 pt-6 border-t border-slate-100"></div>
             </div>
 
             <section class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
-                <h3 class="font-bold mb-4">Message Host</h3>
+                <h3 class="font-bold mb-4">Chat with Host</h3>
                 <div id="message-list" class="max-h-60 overflow-y-auto space-y-3 flex flex-col mb-4 pr-2"></div>
                 <div class="flex gap-2 bg-slate-100 p-2 rounded-2xl">
-                    <input type="text" id="guest-msg" class="bg-transparent px-4 py-2 flex-1 outline-none" placeholder="Type here...">
-                    <button id="send-guest-msg" class="bg-blue-600 text-white px-5 py-2 rounded-xl font-bold">Send</button>
+                    <input type="text" id="guest-msg" class="bg-transparent px-4 py-2 flex-1 outline-none" placeholder="Type a message...">
+                    <button id="send-btn" class="bg-blue-600 text-white px-5 py-2 rounded-xl font-bold">Send</button>
                 </div>
             </section>
         </main>
@@ -80,34 +81,20 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentGuest = null;
 let pinInput = "";
 
-async function findCurrentGuest() {
-    const today = new Date().toISOString().split('T')[0];
-    const { data, error } = await supabaseClient.from('families')
-        .select('*')
-        .lte('check_in_date', today)
-        .gte('check_out_date', today)
-        .limit(1).maybeSingle();
-
-    if (data) {
-        currentGuest = data;
-        document.getElementById('welcome-title').innerText = `Welcome, ${data.last_name}s!`;
-        console.log("Guest Found:", data.last_name);
-    } else {
-        document.getElementById('welcome-title').innerText = "No Guest Today";
-    }
-}
-
 function pressKey(num) {
     if (pinInput.length < 6) {
         pinInput += num;
         updatePinDisplay();
     }
+    if (pinInput.length === 6) {
+        setTimeout(submitPin, 200);
+    }
 }
 
 function clearPin() {
     pinInput = "";
-    document.getElementById('instruction-text').innerText = "Enter your access code";
-    document.getElementById('instruction-text').style.color = "";
+    document.getElementById('instruction-text').innerText = "Enter your 6-digit access code";
+    document.getElementById('instruction-text').classList.remove('text-red-600');
     updatePinDisplay();
 }
 
@@ -119,41 +106,45 @@ function updatePinDisplay() {
 }
 
 async function submitPin() {
-    if (!currentGuest) {
-        alert("No active reservation found for today in the database.");
-        return;
-    }
+    // We search the 'families' table for ANY row where the access_code matches
+    const { data, error } = await supabaseClient
+        .from('families')
+        .select('*')
+        .eq('access_code', pinInput)
+        .maybeSingle();
 
-    // Crucial: Convert both to strings and trim whitespace
-    const entered = pinInput.trim();
-    const stored = String(currentGuest.access_code).trim();
-
-    if (entered === stored) {
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('main-app').classList.remove('hidden');
-        document.getElementById('portal-welcome').innerText = `${currentGuest.last_name} Residence`;
-        renderCalendar();
-        loadMessages();
+    if (data) {
+        currentGuest = data;
+        showPortal();
     } else {
-        document.getElementById('instruction-text').innerText = "WRONG CODE";
-        document.getElementById('instruction-text').style.color = "red";
+        document.getElementById('instruction-text').innerText = "WRONG CODE - TRY AGAIN";
+        document.getElementById('instruction-text').classList.add('text-red-600');
         pinInput = "";
-        setTimeout(updatePinDisplay, 400);
+        updatePinDisplay();
     }
 }
 
-function logout() { location.reload(); }
+function showPortal() {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('main-app').classList.remove('hidden');
+    document.getElementById('portal-welcome').innerText = `Hello, ${currentGuest.last_name}s!`;
+    document.getElementById('stay-dates').innerText = `${currentGuest.check_in_date} to ${currentGuest.check_out_date}`;
+    renderCalendar();
+    loadMessages();
+    setInterval(loadMessages, 5000);
+}
 
 function renderCalendar() {
-    const calDiv = document.getElementById('calendar');
-    calDiv.innerHTML = '';
+    const cal = document.getElementById('calendar');
+    cal.innerHTML = '';
     const start = new Date(currentGuest.check_in_date);
     const end = new Date(currentGuest.check_out_date);
-    for(let d = new Date(start); d <= end; d.setDate(d.getDate()+1)){
+    
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         const day = document.createElement('div');
-        day.className = "aspect-square flex items-center justify-center rounded-lg border text-xs font-bold";
+        day.className = "aspect-square flex items-center justify-center rounded-xl border font-bold text-sm bg-white";
         day.innerText = d.getDate();
-        calDiv.appendChild(day);
+        cal.appendChild(day);
     }
 }
 
@@ -166,7 +157,13 @@ async function loadMessages() {
     `).join('') || '';
 }
 
-findCurrentGuest();
+document.getElementById('send-btn').onclick = async () => {
+    const msg = document.getElementById('guest-msg').value;
+    if(!msg) return;
+    await supabaseClient.from('messages').insert({ family_id: currentGuest.id, message: msg, sent_by: 'guest' });
+    document.getElementById('guest-msg').value = '';
+    loadMessages();
+};
 </script>
 </body>
 </html>
