@@ -7,7 +7,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  .calendar { display: flex; gap: 4px; margin-top: 8px; }
+  .calendar { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
   .day { width: 32px; height: 32px; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer; }
   .past { background-color:#e5e7eb; color:#9ca3af; }
   .current { background-color:#22c55e; color:white; font-weight:bold; }
@@ -26,7 +26,7 @@
   </header>
 
   <main class="bg-white p-6 rounded-2xl shadow-sm">
-    <h2 class="text-xl font-bold mb-2" id="welcome-text">Welcome Guest</h2>
+    <h2 class="text-xl font-bold mb-2" id="welcome-text">Loading...</h2>
     <p id="days-left" class="text-sm text-gray-500 mb-4"></p>
 
     <div id="calendar" class="calendar"></div>
@@ -34,8 +34,8 @@
     <section class="mt-6">
       <h3 class="font-bold mb-2">Message Host</h3>
       <div class="flex gap-2">
-        <input type="text" id="guest-msg" class="border-2 border-gray-200 rounded-xl p-3 flex-1" placeholder="Type a message...">
-        <button id="send-guest-msg" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-blue-700">Send</button>
+        <input type="text" id="guest-msg" class="border-2 border-gray-200 rounded-xl p-3 flex-1" placeholder="Type a message..." disabled>
+        <button id="send-guest-msg" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-blue-700" disabled>Send</button>
       </div>
     </section>
 
@@ -61,12 +61,12 @@ function updateTime() {
 }
 setInterval(updateTime, 1000);
 
-// --- AUTO LOGIN: pick first active guest ---
+// --- AUTO LOGIN ---
 async function guestLogin() {
     const today = new Date().toISOString().split('T')[0];
     const { data } = await supabaseClient.from('families')
         .select('*')
-        .gte('check_in_date', today) // in case of future stays
+        .gte('check_out_date', today) // active guests
         .order('check_in_date', { ascending: true })
         .limit(1)
         .maybeSingle();
@@ -77,6 +77,11 @@ async function guestLogin() {
     }
 
     currentGuest = data;
+
+    // Enable message input now
+    document.getElementById('guest-msg').disabled = false;
+    document.getElementById('send-guest-msg').disabled = false;
+
     renderGuestInfo();
 }
 
@@ -84,14 +89,12 @@ async function guestLogin() {
 function renderGuestInfo(){
     document.getElementById('welcome-text').innerText = `Welcome ${currentGuest.last_name}s!`;
 
-    // Days left
     const today = new Date();
     const checkout = new Date(currentGuest.check_out_date);
     const timeDiff = checkout - today;
     const daysLeft = Math.max(Math.ceil(timeDiff / (1000*60*60*24)), 0);
     document.getElementById('days-left').innerText = `Days left: ${daysLeft}`;
 
-    // Calendar
     const checkin = new Date(currentGuest.check_in_date);
     const calendarDiv = document.getElementById('calendar');
     calendarDiv.innerHTML = '';
@@ -109,12 +112,15 @@ function renderGuestInfo(){
 
 // --- MESSAGES ---
 async function loadMessages(){
-    const { data: msgs } = await supabaseClient.from('messages').select('*, families(last_name)').order('created_at',{ ascending:true });
+    if(!currentGuest) return;
+    const { data: msgs } = await supabaseClient.from('messages').select('*').order('created_at',{ ascending:true });
     const list = document.getElementById('message-list');
     list.innerHTML = '';
     if(!msgs) return;
     msgs.forEach(m=>{
-        let sender = m.guest_id === currentGuest?.id ? "You" : m.guest_id === null ? "Admin" : m.families?.last_name;
+        let sender;
+        if(m.guest_id === currentGuest?.id) sender = "You";
+        else sender = m.guest_id === null ? "Admin" : "Other Guest";
         const div = document.createElement('div');
         div.className = "p-2 bg-gray-100 rounded-xl";
         div.innerHTML = `<strong>${sender}:</strong> ${m.message} <span class="text-xs text-gray-400 ml-2">(${new Date(m.created_at).toLocaleTimeString()})</span>`;
@@ -126,10 +132,10 @@ setInterval(loadMessages, 3000);
 
 // --- SEND MESSAGE ---
 document.getElementById('send-guest-msg').onclick = async () => {
-    if(guestLock) return alert("Device is locked");
+    if(guestLock || !currentGuest) return alert("Device is locked or no active guest");
     const msg = document.getElementById('guest-msg').value.trim();
     if(!msg) return;
-    await supabaseClient.from('messages').insert({ guest_id: currentGuest?.id, message: msg });
+    await supabaseClient.from('messages').insert({ guest_id: currentGuest.id, message: msg });
     document.getElementById('guest-msg').value = '';
     loadMessages();
 };
