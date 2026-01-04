@@ -30,53 +30,56 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', async function() {
+  // Initialize Supabase first
   const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
   const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+  // Load families and display
   async function loadFamilies(){
     const { data } = await supabase.from('families').select('*');
     const list = document.getElementById('family-list');
-    list.innerHTML='';
-    if(data.length===0){
-      list.innerHTML="<p>No families currently created.</p>";
+    list.innerHTML = '';
+    if(!data || data.length === 0){
+      list.innerHTML = "<p>No families currently created.</p>";
       return;
     }
     data.forEach(f=>{
       const div = document.createElement('div');
       div.classList.add('family');
-      div.innerHTML=`<b>${f.last_name}s</b> | ${f.check_in_date} → ${f.check_out_date} 
+      div.innerHTML = `<b>${f.last_name}s</b> | ${f.check_in_date} → ${f.check_out_date} 
         <button onclick="checkout('${f.id}')">Check Out</button>`;
       list.appendChild(div);
     });
   }
 
-  async function checkout(id){
+  // Checkout function
+  window.checkout = async function(id){
     await supabase.from('families').update({checked_in:false}).eq('id',id);
     loadFamilies();
   }
 
-  // Create or update family
-  document.getElementById('create').onclick=async()=>{
+  // Create / update family
+  document.getElementById('create').onclick = async ()=>{
     const ln = document.getElementById('last_name').value;
     const ci = document.getElementById('check_in').value;
     const co = document.getElementById('check_out').value;
-    if(!ln||!ci||!co){ alert("Fill all fields"); return; }
-    await supabase.from('families').upsert({last_name:ln, check_in_date:ci, check_out_date:co});
+    if(!ln || !ci || !co){ alert("Fill all fields"); return; }
+    await supabase.from('families').upsert({last_name: ln, check_in_date: ci, check_out_date: co});
     loadFamilies();
   }
 
-  // Announcement
-  document.getElementById('send_announcement').onclick=async()=>{
+  // Send announcement
+  document.getElementById('send_announcement').onclick = async ()=>{
     const msg = document.getElementById('announcement_msg').value;
     if(!msg) return;
-    await supabase.from('announcements').insert({message:msg});
-    document.getElementById('announcement_msg').value='';
+    await supabase.from('announcements').insert({message: msg});
+    document.getElementById('announcement_msg').value = '';
   }
 
-  // Lock/Unlock placeholders
-  document.getElementById('lock').onclick=()=>alert("Tablets locked (placeholder)");
-  document.getElementById('unlock').onclick=()=>alert("Tablets unlocked (placeholder)");
+  // Lock / Unlock placeholders
+  document.getElementById('lock').onclick = ()=> alert("Tablets locked (placeholder)");
+  document.getElementById('unlock').onclick = ()=> alert("Tablets unlocked (placeholder)");
 
   loadFamilies();
 });
