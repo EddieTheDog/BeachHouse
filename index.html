@@ -31,13 +31,13 @@
 </div>
 
 <script>
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let family = null;
 
-// Display local time
+// Display local Southern California time
 function updateTime(){
   const now = new Date();
   document.getElementById('time').innerText = now.toLocaleTimeString('en-US', {timeZone:'America/Los_Angeles'});
@@ -53,7 +53,12 @@ async function verifyFamily(){
       .select('*')
       .eq('last_name', lastName)
       .maybeSingle();
-  if(!data){ alert("Family not found"); return verifyFamily(); }
+
+  if(!data){ 
+    document.getElementById('welcome').innerText = "No guests currently staying.";
+    return;
+  }
+  
   family = data;
   
   const isCorrect = confirm(`Welcome, ${family.last_name}s!\nIs this correct?`);
@@ -79,7 +84,7 @@ async function loadDashboard(){
   while(cur <= end){
     const dot = document.createElement('div');
     dot.classList.add('dot');
-    if(cur < today.setHours(0,0,0,0)) dot.classList.add('past');
+    if(cur < new Date(today.setHours(0,0,0,0))) dot.classList.add('past');
     else if(cur.toDateString() === new Date().toDateString()) dot.classList.add('current');
     else dot.classList.add('upcoming');
     calendarDiv.appendChild(dot);
