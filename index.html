@@ -124,7 +124,7 @@ function clearPin() {
 
 // --- VALIDATE PIN ---
 async function validatePIN() {
-    const { data, error } = await supabaseClient
+    const { data } = await supabaseClient
         .from('families')
         .select('*')
         .eq('access_code', pinInput.toString())
@@ -209,7 +209,7 @@ async function checkAnnouncements() {
 
 // --- LOCKED STATUS ---
 async function checkLockStatus() {
-    const { data } = await supabaseClient.from('controls').select('is_locked').eq('id', 1).maybeSingle();
+    const { data } = await supabaseClient.from('controls').select('is_locked').limit(1).maybeSingle();
     document.getElementById('locked-overlay').style.display = data?.is_locked ? 'flex' : 'none';
 }
 
@@ -233,7 +233,8 @@ setInterval(updateTime, 1000);
 // --- KEYBOARD SUPPORT ---
 document.addEventListener('keydown', e => {
     if(e.key >= '0' && e.key <= '9') pressKey(e.key);
-    if(e.key === 'Backspace') clearPin();
+    if(e.key === 'Backspace') pinInput = pinInput.slice(0,-1), updatePinDisplay();
+    if(e.key === 'Enter' && pinInput.length === 6) validatePIN();
 });
 </script>
 
