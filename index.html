@@ -1,136 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GuestHub | Beach House</title>
-    <style>
-        :root {
-            --ios-blue: #007AFF;
-            --ios-bg: #f2f2f7;
-            --ios-card: #ffffff;
-            --ios-gray: #8e8e93;
-            --danger: #ff3b30;
-        }
-
-        body { 
-            margin: 0; 
-            font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto; 
-            background-color: var(--ios-bg);
-            color: #000;
-            padding-bottom: 90px;
-        }
-
-        /* App Shell */
-        #app-header {
-            padding: 50px 20px 20px;
-            background: linear-gradient(135deg, #00c6ff, #0072ff);
-            color: white;
-            border-bottom-left-radius: 30px;
-            border-bottom-right-radius: 30px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-
-        .header-title { font-size: 28px; font-weight: 800; margin: 0; }
-        .header-date { opacity: 0.8; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
-
-        main { padding: 20px; max-width: 500px; margin: 0 auto; }
-
-        /* Card System */
-        .card {
-            background: var(--ios-card);
-            border-radius: 18px;
-            padding: 20px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        }
-
-        /* Navigation */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(10px);
-            display: flex;
-            border-top: 0.5px solid #ccc;
-            padding: 10px 0 25px;
-            z-index: 1000;
-        }
-
-        .nav-btn {
-            flex: 1;
-            text-align: center;
-            background: none;
-            border: none;
-            color: var(--ios-gray);
-            font-size: 11px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .nav-btn.active { color: var(--ios-blue); font-weight: bold; }
-        .nav-icon { font-size: 20px; }
-
-        /* Messaging UI */
-        #chat-window {
-            height: 350px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            padding: 5px;
-        }
-
-        .message {
-            max-width: 80%;
-            padding: 10px 14px;
-            border-radius: 18px;
-            font-size: 15px;
-            position: relative;
-        }
-
-        .message.guest {
-            align-self: flex-end;
-            background-color: var(--ios-blue);
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-
-        .message.host {
-            align-self: flex-start;
-            background-color: #e9e9eb;
-            color: black;
-            border-bottom-left-radius: 4px;
-        }
-
-        .timestamp {
-            font-size: 10px;
-            margin-top: 4px;
-            opacity: 0.7;
-            display: block;
-        }
-
-        /* Verification Screen */
-        #verification-overlay {
-            position: fixed;
-            inset: 0;
-            background: var(--ios-bg);
-            z-index: 2000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 30px;
-        }
-
-        .btn-primary { background: var(--ios-blue); color: white; border: none; padding: 15px; border-radius: 12px; width: 100%; font-weight: 600; cursor: pointer; }
-        .btn-outline { background: none; border: 1px solid var(--ios-gray); color: var(--ios-gray); padding: 15px; border-radius: 12px; width: 100%; margin-top: 10px; cursor: pointer; }
-
-        .hidden { display: none !important; }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GuestHub | Beach House</title>
+<style>
+:root {
+    --ios-blue: #007AFF;
+    --ios-bg: #f2f2f7;
+    --ios-card: #ffffff;
+    --ios-gray: #8e8e93;
+    --danger: #ff3b30;
+}
+body { margin:0; font-family:-apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto; background-color: var(--ios-bg); color: #000; padding-bottom: 90px;}
+#app-header { padding: 50px 20px 20px; background: linear-gradient(135deg, #00c6ff, #0072ff); color: white; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);}
+.header-title { font-size: 28px; font-weight: 800; margin: 0; }
+.header-date { opacity: 0.8; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+main { padding: 20px; max-width: 500px; margin: 0 auto; }
+.card { background: var(--ios-card); border-radius: 18px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);}
+.bottom-nav { position: fixed; bottom: 0; width: 100%; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); display: flex; border-top: 0.5px solid #ccc; padding: 10px 0 25px; z-index: 1000; }
+.nav-btn { flex: 1; text-align: center; background: none; border: none; color: var(--ios-gray); font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.nav-btn.active { color: var(--ios-blue); font-weight: bold; }
+.nav-icon { font-size: 20px; }
+#chat-window { height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 5px; }
+.message { max-width: 80%; padding: 10px 14px; border-radius: 18px; font-size: 15px; position: relative; }
+.message.guest { align-self: flex-end; background-color: var(--ios-blue); color: white; border-bottom-right-radius: 4px; }
+.message.host { align-self: flex-start; background-color: #e9e9eb; color: black; border-bottom-left-radius: 4px; }
+.timestamp { font-size: 10px; margin-top: 4px; opacity: 0.7; display: block; }
+#verification-overlay { position: fixed; inset: 0; background: var(--ios-bg); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 30px; }
+.btn-primary { background: var(--ios-blue); color: white; border: none; padding: 15px; border-radius: 12px; width: 100%; font-weight: 600; cursor: pointer; }
+.btn-outline { background: none; border: 1px solid var(--ios-gray); color: var(--ios-gray); padding: 15px; border-radius: 12px; width: 100%; margin-top: 10px; cursor: pointer; }
+.hidden { display: none !important; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 
@@ -144,7 +46,7 @@
 </div>
 
 <header id="app-header">
-    <div class="header-date" id="current-date">Saturday, Jan 3</div>
+    <div class="header-date" id="current-date"></div>
     <h1 class="header-title">GuestHub</h1>
 </header>
 
@@ -154,7 +56,6 @@
             <h4 style="margin:0">📢 Announcement</h4>
             <p style="font-size: 14px; margin: 8px 0 0;">Check-out is at 11:00 AM. Please ensure the balcony door is locked before leaving. Have a great stay!</p>
         </div>
-
         <div class="card">
             <h3>House Details</h3>
             <p><strong>Wifi:</strong> BeachGuest_5G</p>
@@ -195,131 +96,120 @@
 </nav>
 
 <script>
-    const supabaseClient = supabase.createClient(
-        'https://ofnlpqfscyecatetnuqi.supabase.co',
-        'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc'
-    );
+const supabase = supabase.createClient(
+    'https://ofnlpqfscyecatetnuqi.supabase.co',
+    'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc'
+);
 
-    let guestData = null;
+let guestData = null;
 
-    async function init() {
-        // Display Current Date
-        const options = { weekday: 'long', month: 'short', day: 'numeric' };
-        document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', options);
+// Display current date
+document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
-        const today = new Date().toISOString().split('T')[0];
-        
-        // Fetch guest by date
-        const { data, error } = await supabaseClient
-            .from('guests')
-            .select('*')
-            .lte('start_date', today)
-            .gte('end_date', today)
-            .eq('active', true)
-            .maybeSingle();
+async function init() {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const { data, error } = await supabase
+        .from('guests')
+        .select('*')
+        .lte('start_date', today)  // start_date <= today
+        .gte('end_date', today)    // end_date >= today
+        .eq('active', true)
+        .maybeSingle();
 
-        if (error || !data) {
-            document.body.innerHTML = "<div style='padding:50px; text-align:center;'>No active guest found for today.</div>";
-            return;
-        }
-
-        guestData = data;
-
-        // Check Verification Status
-        if (guestData.verification_status === 'pending') {
-            document.getElementById('verification-overlay').classList.remove('hidden');
-            document.getElementById('name-placeholder').innerText = guestData.last_name;
-        } else if (guestData.verification_status === 'locked') {
-            showLockedScreen();
-        }
-
-        loadMessages();
-        subscribeToMessages();
+    if(error || !data) {
+        document.body.innerHTML = "<div style='padding:50px; text-align:center;'>No active guest found for today.</div>";
+        return;
     }
 
-    // Tab Switching Logic
-    function showTab(tabId, btn) {
-        document.querySelectorAll('.tab-view').forEach(t => t.classList.add('hidden'));
-        document.getElementById('tab-' + tabId).classList.remove('hidden');
-        
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+    guestData = data;
 
-        if(tabId === 'chat') {
-            const win = document.getElementById('chat-window');
-            win.scrollTop = win.scrollHeight;
-        }
-    }
-
-    // Message Handling
-    async function loadMessages() {
-        const { data } = await supabaseClient.from('messages')
-            .select('*')
-            .eq('guest_id', guestData.id)
-            .order('created_at', { ascending: true });
-
-        const window = document.getElementById('chat-window');
-        window.innerHTML = data.map(m => {
-            const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            return `
-                <div class="message ${m.sender_type === 'host' ? 'host' : 'guest'}">
-                    ${m.message_text}
-                    <span class="timestamp">${time}</span>
-                </div>
-            `;
-        }).join('');
-        window.scrollTop = window.scrollHeight;
-    }
-
-    function subscribeToMessages() {
-        supabaseClient.channel('realtime-msgs').on('postgres_changes', 
-            { event: 'INSERT', schema: 'public', table: 'messages', filter: `guest_id=eq.${guestData.id}` }, 
-            () => loadMessages()
-        ).subscribe();
-    }
-
-    // Button Actions
-    document.getElementById('btn-verify-yes').onclick = async () => {
-        await supabaseClient.from('guests').update({ verification_status: 'verified', checked_in: true }).eq('id', guestData.id);
-        document.getElementById('verification-overlay').classList.add('hidden');
-    };
-
-    document.getElementById('btn-verify-no').onclick = async () => {
-        await supabaseClient.from('guests').update({ verification_status: 'locked' }).eq('id', guestData.id);
+    if(guestData.verification_status === 'pending') {
+        document.getElementById('verification-overlay').classList.remove('hidden');
+        document.getElementById('name-placeholder').innerText = guestData.guest_last_name;
+    } else if(guestData.verification_status === 'locked') {
         showLockedScreen();
-    };
-
-    document.getElementById('btn-send').onclick = async () => {
-        const input = document.getElementById('chat-input');
-        if (!input.value.trim()) return;
-        await supabaseClient.from('messages').insert({ 
-            guest_id: guestData.id, 
-            message_text: input.value, 
-            sender_type: 'guest' 
-        });
-        input.value = '';
-    };
-
-    document.getElementById('btn-submit-service').onclick = async () => {
-        const text = document.getElementById('service-input').value;
-        if(!text) return;
-        await supabaseClient.from('work_requests').insert({ guest_id: guestData.id, request_text: text });
-        alert("Maintenance has been notified.");
-        document.getElementById('service-input').value = '';
-    };
-
-    function showLockedScreen() {
-        const overlay = document.getElementById('verification-overlay');
-        overlay.classList.remove('hidden');
-        overlay.innerHTML = `
-            <div class="card" style="text-align:center;">
-                <h2 style="color:var(--danger);">Tablet Locked</h2>
-                <p>For security, access has been restricted. Please contact the property manager to unlock this device.</p>
-            </div>
-        `;
     }
 
-    init();
+    loadMessages();
+    subscribeToMessages();
+}
+
+// Tab Switching
+function showTab(tabId, btn) {
+    document.querySelectorAll('.tab-view').forEach(t => t.classList.add('hidden'));
+    document.getElementById('tab-' + tabId).classList.remove('hidden');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    if(tabId === 'chat') {
+        const win = document.getElementById('chat-window');
+        win.scrollTop = win.scrollHeight;
+    }
+}
+
+// Messages
+async function loadMessages() {
+    if(!guestData) return;
+    const { data } = await supabase.from('messages')
+        .select('*')
+        .eq('guest_id', guestData.id)
+        .order('created_at', { ascending:true });
+
+    const win = document.getElementById('chat-window');
+    win.innerHTML = data.map(m => {
+        const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' });
+        return `<div class="message ${m.sender_type==='host'?'host':'guest'}">${m.message_text}<span class="timestamp">${time}</span></div>`;
+    }).join('');
+    win.scrollTop = win.scrollHeight;
+}
+
+function subscribeToMessages() {
+    supabase.channel('realtime-msgs').on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `guest_id=eq.${guestData.id}` },
+        () => loadMessages()
+    ).subscribe();
+}
+
+// Buttons
+document.getElementById('btn-verify-yes').onclick = async () => {
+    await supabase.from('guests').update({ verification_status:'verified', checked_in:true }).eq('id', guestData.id);
+    document.getElementById('verification-overlay').classList.add('hidden');
+};
+
+document.getElementById('btn-verify-no').onclick = async () => {
+    await supabase.from('guests').update({ verification_status:'locked' }).eq('id', guestData.id);
+    showLockedScreen();
+};
+
+document.getElementById('btn-send').onclick = async () => {
+    const input = document.getElementById('chat-input');
+    if(!input.value.trim()) return;
+    await supabase.from('messages').insert({ guest_id: guestData.id, message_text: input.value, sender_type:'guest' });
+    input.value = '';
+};
+
+document.getElementById('btn-submit-service').onclick = async () => {
+    const text = document.getElementById('service-input').value;
+    if(!text) return;
+    await supabase.from('work_requests').insert({ guest_id: guestData.id, request_text:text });
+    alert("Maintenance has been notified.");
+    document.getElementById('service-input').value = '';
+};
+
+document.getElementById('btn-checkout').onclick = async () => {
+    await supabase.from('guests').update({ active:false }).eq('id', guestData.id);
+    alert("Checked out successfully!");
+    location.reload();
+};
+
+function showLockedScreen() {
+    const overlay = document.getElementById('verification-overlay');
+    overlay.classList.remove('hidden');
+    overlay.innerHTML = `<div class="card" style="text-align:center;"><h2 style="color:var(--danger);">Tablet Locked</h2><p>Access restricted. Contact the property manager.</p></div>`;
+}
+
+init();
 </script>
 </body>
 </html>
