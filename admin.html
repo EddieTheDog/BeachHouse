@@ -100,11 +100,10 @@
             <div id="message-list" class="max-h-96 overflow-y-auto space-y-3"></div>
         </section>
         <section class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mt-4">
-            <h2 class="text-lg font-bold mb-4">Reply to Guest</h2>
+            <h2 class="text-lg font-bold mb-4">Send Message</h2>
             <div class="flex flex-col md:flex-row gap-2">
-                <select id="reply-guest" class="border-2 border-gray-200 rounded-xl p-3 flex-1"></select>
-                <input type="text" id="reply-msg" placeholder="Type message..." class="border-2 border-gray-200 rounded-xl p-3 flex-1">
-                <button id="send-reply" class="bg-green-600 text-white rounded-xl px-4 py-2 font-bold hover:bg-green-700">Send</button>
+                <input type="text" id="send-msg" placeholder="Type message..." class="border-2 border-gray-200 rounded-xl p-3 flex-1">
+                <button id="send-message" class="bg-green-600 text-white rounded-xl px-4 py-2 font-bold hover:bg-green-700">Send</button>
             </div>
         </section>
     </main>
@@ -129,14 +128,13 @@
 </div>
 
 <script>
-// --- CONFIG ---
 const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let activeExpiry = null;
 
-// --- UTILS ---
+// --- TAB SWITCH ---
 function openTab(evt, tabName) {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => {
@@ -148,11 +146,57 @@ function openTab(evt, tabName) {
     evt.currentTarget.classList.remove('text-gray-500');
 }
 
+// --- CLOCK ---
 function updateTime() {
     const now = new Date();
     document.getElementById('current-time').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
 }
 setInterval(updateTime, 1000);
+
+// --- LOAD FAMILIES ---
+async function loadFamilies() {
+    const listDiv = document.getElementById('family-list');
+    const { data } = await supabaseClient.from('families').select('*').order('check_in_date', { ascending: true });
+    listDiv.innerHTML = '';
+    if (!data || data.length === 0) {
+        listDiv.innerHTML = "<p class='text-gray-400 italic py-4'>No guests currently registered.</p>";
+        return;
+    }
+    data.forEach(f => {
+        const card = document.createElement('div');
+        card.className = "bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center group hover:border-blue-200 transition";
+        card.innerHTML = `
+            <div>
+                <h3 class="font-black text-gray-800 text-lg uppercase">${f.last_name}</h3>
+                <p class="text-xs font-bold text-gray-400 tracking-wider">${f.check_in_date} → ${f.check_out_date}</p>
+            </div>
+            <button onclick="checkout('${f.id}')" class="bg-red-50 text-red-500 px-4 py-2 rounded-xl text-xs font-black opacity-0 group-hover:opacity-100 transition">CHECK OUT</button>
+        `;
+        listDiv.appendChild(card);
+    });
+}
+
+// --- CHECKOUT + DELETE MESSAGES ---
+window.checkout = async function(id) {
+    if(confirm("Complete checkout for this family?")) {
+        await supabaseClient.from('families').delete().eq('id', id);
+        await supabaseClient.from('messages').delete().eq('guest_id', id);
+        loadFamilies();
+        loadMessages();
+    }
+};
+
+// --- CREATE FAMILY ---
+document.getElementById('create').onclick = async () => {
+    const ln = document.getElementById('last_name').value;
+    const ci = document.getElementById('check_in').value;
+    const co = document.getElementById('check_out').value;
+    if (!ln || !ci || !co) return alert("All fields required");
+
+    await supabaseClient.from('families').upsert({ last_name: ln, check_in_date: ci, check_out_date: co });
+    document.getElementById('last_name').value = '';
+    loadFamilies();
+};
 
 // --- ANNOUNCEMENTS ---
 async function updateStatusUI() {
@@ -174,9 +218,6 @@ async function updateStatusUI() {
     if(diff <= 0){
         await supabaseClient.from('announcements').delete().eq('id', announcement.id);
         activeExpiry = null;
-        statusText.innerText = "No Active Announcement";
-        statusText.className = "font-mono font-bold text-gray-400";
-        statusCard.className = "mb-6 p-4 rounded-2xl text-center border-2 border-dashed border-gray-200 bg-transparent";
     } else {
         const mins = Math.floor(diff / 1000 / 60);
         const secs = Math.floor((diff / 1000) % 60);
@@ -187,98 +228,64 @@ async function updateStatusUI() {
 }
 setInterval(updateStatusUI, 1000);
 
-// --- LOAD FAMILIES ---
-document.addEventListener('DOMContentLoaded', async function() {
-    const listDiv = document.getElementById('family-list');
+document.getElementById('send_announcement').onclick = async () => {
+    const msg = document.getElementById('announcement_msg').value.trim();
+    const mins = parseInt(document.getElementById('duration_mins').value);
+    if(!msg) return alert("Enter a message");
 
-    async function loadFamilies() {
-        const { data } = await supabaseClient.from('families').select('*').order('check_in_date', { ascending: true });
-        listDiv.innerHTML = '';
-        if (!data || data.length === 0) {
-            listDiv.innerHTML = "<p class='text-gray-400 italic py-4'>No guests currently registered.</p>";
-            return;
-        }
-        data.forEach(f => {
-            const card = document.createElement('div');
-            card.className = "bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center group hover:border-blue-200 transition";
-            card.innerHTML = `
-                <div>
-                    <h3 class="font-black text-gray-800 text-lg uppercase">${f.last_name}</h3>
-                    <p class="text-xs font-bold text-gray-400 tracking-wider">${f.check_in_date} → ${f.check_out_date}</p>
-                </div>
-                <button onclick="checkout('${f.id}')" class="bg-red-50 text-red-500 px-4 py-2 rounded-xl text-xs font-black opacity-0 group-hover:opacity-100 transition">CHECK OUT</button>
-            `;
-            listDiv.appendChild(card);
-        });
-    }
+    const expiryDate = new Date();
+    expiryDate.setMinutes(expiryDate.getMinutes() + mins);
 
-    window.checkout = async function(id) {
-        if(confirm("Complete checkout for this family?")) {
-            await supabaseClient.from('families').delete().eq('id', id);
-            loadFamilies();
-        }
-    };
+    await supabaseClient.from('announcements').delete().neq('message', 'CLEAR_ALL');
+    await supabaseClient.from('announcements').insert({ message: msg, expires_at: expiryDate.toISOString() });
+    activeExpiry = expiryDate;
+    document.getElementById('announcement_msg').value = '';
+};
 
-    document.getElementById('create').onclick = async () => {
-        const ln = document.getElementById('last_name').value;
-        const ci = document.getElementById('check_in').value;
-        const co = document.getElementById('check_out').value;
-        if (!ln || !ci || !co) return alert("All fields required");
+document.getElementById('clear_announcement').onclick = async () => {
+    await supabaseClient.from('announcements').delete().neq('message','CLEAR_ALL');
+    activeExpiry = null;
+};
 
-        await supabaseClient.from('families').upsert({ last_name: ln, check_in_date: ci, check_out_date: co });
-        document.getElementById('last_name').value = '';
-        loadFamilies();
-    };
-
-    loadFamilies();
-
-    // --- Messages ---
+// --- MESSAGES ---
+async function loadMessages() {
+    const { data: msgs } = await supabaseClient.from('messages').select('*, families(last_name)').order('created_at',{ ascending:true });
     const messageList = document.getElementById('message-list');
-    const replySelect = document.getElementById('reply-guest');
+    messageList.innerHTML = '';
+    if(!msgs) return;
+    msgs.forEach(m => {
+        const div = document.createElement('div');
+        div.className = "p-3 bg-gray-100 rounded-xl";
+        div.innerHTML = `<strong>${m.families.last_name}:</strong> ${m.message} <span class="text-xs text-gray-400 ml-2">(${new Date(m.created_at).toLocaleString()})</span>`;
+        messageList.appendChild(div);
+    });
+}
+setInterval(loadMessages, 5000);
 
-    async function loadMessages() {
-        const { data: msgs } = await supabaseClient.from('messages').select('*, families(last_name)').order('created_at', { ascending: true });
-        messageList.innerHTML = '';
-        replySelect.innerHTML = '';
-        const guestIds = new Set();
-        msgs.forEach(m => {
-            const div = document.createElement('div');
-            div.className = "p-3 bg-gray-100 rounded-xl";
-            div.innerHTML = `<strong>${m.families.last_name}:</strong> ${m.message} <span class="text-xs text-gray-400 ml-2">(${new Date(m.created_at).toLocaleString()})</span>`;
-            messageList.appendChild(div);
-            if(!guestIds.has(m.guest_id)){
-                const option = document.createElement('option');
-                option.value = m.guest_id;
-                option.innerText = m.families.last_name;
-                replySelect.appendChild(option);
-                guestIds.add(m.guest_id);
-            }
-        });
-    }
-
-    setInterval(loadMessages, 5000);
-
-    document.getElementById('send-reply').onclick = async () => {
-        const guestId = replySelect.value;
-        const msg = document.getElementById('reply-msg').value.trim();
-        if(!guestId || !msg) return;
-        await supabaseClient.from('messages').insert({guest_id: guestId, message: msg});
-        document.getElementById('reply-msg').value = '';
-        loadMessages();
-    };
-
-});
+document.getElementById('send-message').onclick = async () => {
+    const msg = document.getElementById('send-msg').value.trim();
+    if(!msg) return;
+    // Use guest_id = null for admin message
+    await supabaseClient.from('messages').insert({guest_id: null, message: msg});
+    document.getElementById('send-msg').value = '';
+    loadMessages();
+};
 
 // --- LOCK/UNLOCK TABLETS ---
 document.getElementById('lock').onclick = async () => {
-    await supabaseClient.from('tablet_lock').upsert({ id: 1, is_locked: true });
+    await supabaseClient.from('tablet_lock').upsert({ id:1, is_locked:true });
     alert("All tablets locked!");
 };
 
 document.getElementById('unlock').onclick = async () => {
-    await supabaseClient.from('tablet_lock').upsert({ id: 1, is_locked: false });
+    await supabaseClient.from('tablet_lock').upsert({ id:1, is_locked:false });
     alert("All tablets unlocked!");
 };
+
+// Initial load
+loadFamilies();
+loadMessages();
+updateStatusUI();
 </script>
 </body>
 </html>
