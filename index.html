@@ -109,13 +109,14 @@ document.getElementById('current-date').innerText = new Date().toLocaleDateStrin
 async function init() {
     const today = new Date().toISOString().split('T')[0];
     
-    const { data, error } = await supabase
-        .from('guests')
-        .select('*')
-        .lte('start_date', today)  // start_date <= today
-        .gte('end_date', today)    // end_date >= today
-        .eq('active', true)
-        .maybeSingle();
+const { data, error } = await supabase
+    .from('guests')
+    .select('*')
+    .lte('start_date', today)   // guest started on or before today
+    .gte('end_date', today)     // guest ends on or after today
+    .eq('active', true)
+    .maybeSingle();
+
 
     if(error || !data) {
         document.body.innerHTML = "<div style='padding:50px; text-align:center;'>No active guest found for today.</div>";
