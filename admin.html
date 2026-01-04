@@ -15,6 +15,7 @@
 <body class="bg-gray-50 text-gray-900 font-sans">
 
 <div class="max-w-5xl mx-auto p-4 md:p-8">
+
     <!-- Header -->
     <header class="flex justify-between items-center mb-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div>
@@ -31,6 +32,7 @@
     <nav class="flex space-x-1 mb-8 bg-gray-200/50 p-1 rounded-xl w-fit">
         <button class="tab-btn px-6 py-2.5 rounded-lg font-bold text-sm transition-all active bg-white shadow-sm" onclick="openTab(event, 'tab-families')">GUEST LIST</button>
         <button class="tab-btn px-6 py-2.5 rounded-lg font-bold text-sm transition-all text-gray-500 hover:text-gray-700" onclick="openTab(event, 'tab-announcements')">ANNOUNCEMENTS</button>
+        <button class="tab-btn px-6 py-2.5 rounded-lg font-bold text-sm transition-all text-gray-500 hover:text-gray-700" onclick="openTab(event, 'tab-messages')">MESSAGES</button>
         <button class="tab-btn px-6 py-2.5 rounded-lg font-bold text-sm transition-all text-gray-500 hover:text-gray-700" onclick="openTab(event, 'tab-hardware')">HARDWARE</button>
     </nav>
 
@@ -52,9 +54,7 @@
 
         <section>
             <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Active Reservations</h2>
-            <div id="family-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Families will load here -->
-            </div>
+            <div id="family-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </section>
     </main>
 
@@ -91,6 +91,22 @@
                 </div>
             </section>
         </div>
+    </main>
+
+    <!-- Messages Tab -->
+    <main id="tab-messages" class="tab-content space-y-6">
+        <section class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+            <h2 class="text-lg font-bold mb-4">Guest Messages</h2>
+            <div id="message-list" class="max-h-96 overflow-y-auto space-y-3"></div>
+        </section>
+        <section class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mt-4">
+            <h2 class="text-lg font-bold mb-4">Reply to Guest</h2>
+            <div class="flex flex-col md:flex-row gap-2">
+                <select id="reply-guest" class="border-2 border-gray-200 rounded-xl p-3 flex-1"></select>
+                <input type="text" id="reply-msg" placeholder="Type message..." class="border-2 border-gray-200 rounded-xl p-3 flex-1">
+                <button id="send-reply" class="bg-green-600 text-white rounded-xl px-4 py-2 font-bold hover:bg-green-700">Send</button>
+            </div>
+        </section>
     </main>
 
     <!-- Hardware Tab -->
@@ -139,11 +155,12 @@ function updateTime() {
 setInterval(updateTime, 1000);
 
 // --- ANNOUNCEMENTS ---
-function updateStatusUI() {
+async function updateStatusUI() {
     const statusCard = document.getElementById('status-card');
     const statusText = document.getElementById('status-text');
-    
-    if (!activeExpiry) {
+
+    const { data: announcement } = await supabaseClient.from('announcements').select('*').limit(1).maybeSingle();
+    if(!announcement){
         statusText.innerText = "No Active Announcement";
         statusText.className = "font-mono font-bold text-gray-400";
         statusCard.className = "mb-6 p-4 rounded-2xl text-center border-2 border-dashed border-gray-200 bg-transparent";
@@ -151,13 +168,15 @@ function updateStatusUI() {
     }
 
     const now = new Date();
-    const diff = activeExpiry - now;
+    const expiry = new Date(announcement.expires_at);
+    const diff = expiry - now;
 
-    if (diff <= 0) {
-        statusText.innerText = "Announcement Expired";
-        statusText.className = "font-mono font-bold text-orange-500";
-        statusCard.className = "mb-6 p-4 rounded-2xl text-center border-2 border-orange-200 bg-orange-50";
+    if(diff <= 0){
+        await supabaseClient.from('announcements').delete().eq('id', announcement.id);
         activeExpiry = null;
+        statusText.innerText = "No Active Announcement";
+        statusText.className = "font-mono font-bold text-gray-400";
+        statusCard.className = "mb-6 p-4 rounded-2xl text-center border-2 border-dashed border-gray-200 bg-transparent";
     } else {
         const mins = Math.floor(diff / 1000 / 60);
         const secs = Math.floor((diff / 1000) % 60);
@@ -211,44 +230,43 @@ document.addEventListener('DOMContentLoaded', async function() {
         loadFamilies();
     };
 
-    // --- ANNOUNCEMENT BUTTONS ---
-    async function syncAnnouncement() {
-        const { data } = await supabaseClient.from('announcements').select('*').limit(1).maybeSingle();
-        if (data && data.expires_at) {
-            activeExpiry = new Date(data.expires_at);
-        } else {
-            activeExpiry = null;
-        }
+    loadFamilies();
+
+    // --- Messages ---
+    const messageList = document.getElementById('message-list');
+    const replySelect = document.getElementById('reply-guest');
+
+    async function loadMessages() {
+        const { data: msgs } = await supabaseClient.from('messages').select('*, families(last_name)').order('created_at', { ascending: true });
+        messageList.innerHTML = '';
+        replySelect.innerHTML = '';
+        const guestIds = new Set();
+        msgs.forEach(m => {
+            const div = document.createElement('div');
+            div.className = "p-3 bg-gray-100 rounded-xl";
+            div.innerHTML = `<strong>${m.families.last_name}:</strong> ${m.message} <span class="text-xs text-gray-400 ml-2">(${new Date(m.created_at).toLocaleString()})</span>`;
+            messageList.appendChild(div);
+            if(!guestIds.has(m.guest_id)){
+                const option = document.createElement('option');
+                option.value = m.guest_id;
+                option.innerText = m.families.last_name;
+                replySelect.appendChild(option);
+                guestIds.add(m.guest_id);
+            }
+        });
     }
 
-    document.getElementById('send_announcement').onclick = async () => {
-        const msg = document.getElementById('announcement_msg').value.trim();
-        const mins = parseInt(document.getElementById('duration_mins').value);
-        if (!msg) return alert("Please enter a message");
+    setInterval(loadMessages, 5000);
 
-        const expiryDate = new Date();
-        expiryDate.setMinutes(expiryDate.getMinutes() + mins);
-
-        await supabaseClient.from('announcements').delete().neq('message', 'CLEAR_ALL');
-        const { error } = await supabaseClient.from('announcements').insert({
-            message: msg,
-            expires_at: expiryDate.toISOString()
-        });
-
-        if (!error) {
-            activeExpiry = expiryDate;
-            document.getElementById('announcement_msg').value = '';
-            alert("Announcement Pushed!");
-        }
+    document.getElementById('send-reply').onclick = async () => {
+        const guestId = replySelect.value;
+        const msg = document.getElementById('reply-msg').value.trim();
+        if(!guestId || !msg) return;
+        await supabaseClient.from('messages').insert({guest_id: guestId, message: msg});
+        document.getElementById('reply-msg').value = '';
+        loadMessages();
     };
 
-    document.getElementById('clear_announcement').onclick = async () => {
-        await supabaseClient.from('announcements').delete().neq('message', 'CLEAR_ALL');
-        activeExpiry = null;
-    };
-
-    loadFamilies();
-    syncAnnouncement();
 });
 
 // --- LOCK/UNLOCK TABLETS ---
