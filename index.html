@@ -14,7 +14,7 @@
   .past { background-color:#f1f5f9; color:#94a3b8; text-decoration: line-through; }
   .current { background-color:#2563eb; color:white; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3); }
   .future { background-color:#ffffff; color:#334155; border: 1px solid #e2e8f0; }
-  .locked-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.9); display:none; flex-direction: column; align-items:center; justify-content:center; color:white; z-index:100; backdrop-filter: blur(10px); }
+  .locked-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.95); display:none; flex-direction: column; align-items:center; justify-content:center; color:white; z-index:100; backdrop-filter: blur(10px); }
 </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 min-h-screen">
@@ -23,6 +23,7 @@
     <div class="text-center">
         <span class="text-6xl block mb-4">🔒</span>
         <h2 class="text-2xl font-bold uppercase tracking-widest">Device Locked</h2>
+        <p class="text-slate-400 mt-2">Please contact the host.</p>
     </div>
 </div>
 
@@ -39,14 +40,14 @@
         <div class="bg-indigo-600 text-white p-5 rounded-[2rem] shadow-lg flex items-center gap-4">
             <span class="text-2xl animate-bounce">📢</span>
             <div>
-                <p class="text-[10px] font-bold uppercase tracking-widest opacity-70">Important Announcement</p>
+                <p class="text-[10px] font-bold uppercase tracking-widest opacity-70">Host Announcement</p>
                 <p id="announcement-text" class="font-bold text-lg leading-tight"></p>
             </div>
         </div>
     </div>
 
     <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
-        <h2 class="text-2xl font-bold text-slate-800" id="welcome-text">Checking in...</h2>
+        <h2 class="text-2xl font-bold text-slate-800" id="welcome-text">Loading...</h2>
         <p id="days-left" class="text-slate-500 font-medium mb-4 text-sm"></p>
         <div class="pt-4 border-t border-slate-100">
             <div id="calendar" class="calendar"></div>
@@ -54,7 +55,7 @@
     </div>
 
     <section class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
-      <h3 class="font-bold text-slate-800 mb-4 px-1">Messages with Host</h3>
+      <h3 class="font-bold text-slate-800 mb-4 px-1">Host Chat</h3>
       <div id="message-list" class="max-h-80 overflow-y-auto space-y-3 mb-4 pr-1 flex flex-col"></div>
       <div class="flex gap-2 bg-slate-100 p-2 rounded-2xl">
         <input type="text" id="guest-msg" class="bg-transparent px-4 py-2 flex-1 outline-none text-slate-700" placeholder="Type a message..." disabled>
@@ -81,9 +82,8 @@ setInterval(updateTime, 1000);
 async function checkAnnouncements() {
     const { data } = await supabaseClient.from('announcements').select('*').limit(1).maybeSingle();
     const banner = document.getElementById('announcement-banner');
-    const text = document.getElementById('announcement-text');
     if (data && new Date(data.expires_at) > new Date()) {
-        text.innerText = data.message;
+        document.getElementById('announcement-text').innerText = data.message;
         banner.classList.remove('hidden');
     } else {
         banner.classList.add('hidden');
@@ -94,29 +94,25 @@ setInterval(checkAnnouncements, 10000);
 async function guestLogin() {
     const todayISO = new Date().toISOString().split('T')[0];
     let lastName = localStorage.getItem('guest_last_name');
-    let guest;
-    if(lastName){
-        const { data } = await supabaseClient.from('families').select('*').eq('last_name', lastName).gte('check_out_date', todayISO).maybeSingle();
-        guest = data;
+    if(!lastName){
+        lastName = prompt("Enter Last Name:");
+        if(lastName) localStorage.setItem('guest_last_name', lastName);
     }
-    if(!guest){
-        lastName = prompt("Enter your last name:");
-        if(!lastName) return guestLogin();
-        const { data } = await supabaseClient.from('families').select('*').eq('last_name', lastName).gte('check_out_date', todayISO).maybeSingle();
-        if(!data) { document.getElementById('welcome-text').innerText = "Access Denied"; return; }
-        guest = data;
-        localStorage.setItem('guest_last_name', lastName);
+    const { data } = await supabaseClient.from('families').select('*').eq('last_name', lastName).gte('check_out_date', todayISO).maybeSingle();
+    if(data){
+        currentGuest = data;
+        document.getElementById('guest-msg').disabled = false;
+        document.getElementById('send-guest-msg').disabled = false;
+        renderGuestInfo();
+        loadMessages();
+        checkAnnouncements();
+    } else {
+        document.getElementById('welcome-text').innerText = "Access Restricted";
     }
-    currentGuest = guest;
-    document.getElementById('guest-msg').disabled = false;
-    document.getElementById('send-guest-msg').disabled = false;
-    renderGuestInfo();
-    loadMessages();
-    checkAnnouncements();
 }
 
 function renderGuestInfo(){
-    document.getElementById('welcome-text').innerText = `Hello, ${currentGuest.last_name}s!`;
+    document.getElementById('welcome-text').innerText = `Welcome, ${currentGuest.last_name} family!`;
     const today = new Date(); today.setHours(0,0,0,0);
     const checkout = new Date(currentGuest.check_out_date);
     const checkin = new Date(currentGuest.check_in_date);
@@ -151,10 +147,9 @@ async function loadMessages(){
 setInterval(loadMessages, 5000);
 
 document.getElementById('send-guest-msg').onclick = async () => {
-    if(guestLock || !currentGuest) return;
     const msgInput = document.getElementById('guest-msg');
     const msg = msgInput.value.trim();
-    if(!msg) return;
+    if(!msg || guestLock) return;
     await supabaseClient.from('messages').insert({ family_id: currentGuest.id, message: msg, sent_by: 'guest' });
     msgInput.value = '';
     loadMessages();
@@ -166,7 +161,6 @@ async function checkLock(){
     document.getElementById('locked-overlay').style.display = guestLock ? 'flex' : 'none';
 }
 setInterval(checkLock, 3000);
-
 guestLogin();
 </script>
 </body>
