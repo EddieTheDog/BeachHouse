@@ -12,161 +12,251 @@
         .tab-btn.active { border-bottom: 2px solid #2563eb; color: #2563eb; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body class="bg-gray-50 text-gray-900 font-sans">
 
-<div class="max-w-4xl mx-auto p-6">
-    <header class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Beach House Admin</h1>
-        <p class="text-gray-500">Manage guests, announcements, and device locks.</p>
+<div class="max-w-5xl mx-auto p-4 md:p-8">
+    <header class="flex justify-between items-center mb-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div>
+            <h1 class="text-2xl font-black tracking-tight text-gray-900">BEACH HOUSE <span class="text-blue-600">ADMIN</span></h1>
+            <p class="text-sm text-gray-500 font-medium">System Status: <span class="text-green-500">● Online</span></p>
+        </div>
+        <div class="text-right hidden md:block">
+            <p id="current-time" class="text-lg font-mono font-bold text-gray-700"></p>
+            <p class="text-xs text-gray-400 uppercase tracking-widest">Local Server Time</p>
+        </div>
     </header>
 
-    <nav class="flex border-b border-gray-200 mb-6">
-        <button class="tab-btn px-6 py-2 font-medium active" onclick="openTab(event, 'tab-families')">Families</button>
-        <button class="tab-btn px-6 py-2 font-medium" onclick="openTab(event, 'tab-actions')">Global Actions</button>
+    <nav class="flex space-x-1 mb-8 bg-gray-200/50 p-1 rounded-xl w-fit">
+        <button class="tab-btn px-6 py-2.5 rounded-lg font-bold text-sm transition-all active bg-white shadow-sm" onclick="openTab(event, 'tab-families')">
+            GUEST LIST
+        </button>
+        <button class="tab-btn px-6 py-2.5 rounded-lg font-bold text-sm transition-all text-gray-500 hover:text-gray-700" onclick="openTab(event, 'tab-announcements')">
+            ANNOUNCEMENTS
+        </button>
+        <button class="tab-btn px-6 py-2.5 rounded-lg font-bold text-sm transition-all text-gray-500 hover:text-gray-700" onclick="openTab(event, 'tab-hardware')">
+            HARDWARE
+        </button>
     </nav>
 
-    <div id="tab-families" class="tab-content active">
-        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-8">
-            <h2 class="text-xl font-semibold mb-4">Create / Edit Family</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <input type="text" id="last_name" placeholder="Last Name" class="border p-2 rounded">
-                <div class="flex flex-col">
-                    <label class="text-xs text-gray-400">Check-in</label>
-                    <input type="date" id="check_in" class="border p-2 rounded">
-                </div>
-                <div class="flex flex-col">
-                    <label class="text-xs text-gray-400">Check-out</label>
-                    <input type="date" id="check_out" class="border p-2 rounded">
-                </div>
+    <main id="tab-families" class="tab-content active space-y-6">
+        <section class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+            <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                <span class="w-2 h-6 bg-blue-600 rounded-full"></span> Register New Family
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input type="text" id="last_name" placeholder="Last Name (e.g. Smith)" class="col-span-1 md:col-span-2 border-2 border-gray-100 p-3 rounded-xl focus:border-blue-500 outline-none transition">
+                <input type="date" id="check_in" class="border-2 border-gray-100 p-3 rounded-xl focus:border-blue-500 outline-none transition">
+                <input type="date" id="check_out" class="border-2 border-gray-100 p-3 rounded-xl focus:border-blue-500 outline-none transition">
             </div>
-            <button id="create" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Save Guest</button>
-        </div>
+            <button id="create" class="mt-4 w-full md:w-auto bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transform active:scale-95 transition">
+                Confirm Check-in
+            </button>
+        </section>
 
-        <h2 class="text-xl font-semibold mb-4">Current Families</h2>
-        <div id="family-list" class="grid gap-4">
-            <p class="text-gray-400">Loading families...</p>
-        </div>
-    </div>
+        <section>
+            <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Active Reservations</h2>
+            <div id="family-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
+        </section>
+    </main>
 
-    <div id="tab-actions" class="tab-content">
+    <main id="tab-announcements" class="tab-content space-y-6">
+        <div class="max-w-2xl mx-auto">
+            <section class="bg-white p-8 rounded-3xl border-2 border-gray-100 shadow-xl">
+                <div id="status-card" class="mb-6 p-4 rounded-2xl text-center border-2 transition-all duration-500">
+                    <p id="status-text" class="font-mono font-bold uppercase tracking-tighter text-lg">Initializing...</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs font-bold text-gray-400 uppercase ml-1">Message Content</label>
+                        <textarea id="announcement_msg" rows="4" placeholder="Important message for guests..." class="w-full border-2 border-gray-100 p-4 rounded-2xl focus:border-indigo-500 outline-none transition resize-none"></textarea>
+                    </div>
+
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                        <span class="font-bold text-gray-700">Display Duration</span>
+                        <div class="flex items-center gap-3">
+                            <input type="number" id="duration_mins" value="15" min="1" class="w-20 p-2 rounded-lg border-2 border-gray-200 text-center font-bold">
+                            <span class="text-gray-500 font-medium text-sm">Minutes</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-3 pt-2">
+                        <button id="send_announcement" class="bg-indigo-600 text-white py-4 rounded-2xl font-black text-lg hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition">
+                            PUSH TO ALL TABLETS
+                        </button>
+                        <button id="clear_announcement" class="text-red-500 font-bold py-2 hover:bg-red-50 rounded-xl transition">
+                            Take Down Current Announcement
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <main id="tab-hardware" class="tab-content">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                <h3 class="font-bold mb-4">Device Management</h3>
-                <div class="flex space-x-2">
-                    <button id="lock" class="bg-red-500 text-white px-4 py-2 rounded flex-1">Lock All</button>
-                    <button id="unlock" class="bg-green-500 text-white px-4 py-2 rounded flex-1">Unlock All</button>
+            <div class="bg-slate-900 p-8 rounded-3xl text-white shadow-2xl">
+                <h3 class="text-2xl font-bold mb-2">Device Lockdown</h3>
+                <p class="text-slate-400 mb-8">Restrict guest access to tablet features immediately.</p>
+                <div class="grid gap-4">
+                    <button id="lock" class="bg-red-600 hover:bg-red-700 p-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition">
+                        <span>🔒 LOCK ALL DEVICES</span>
+                    </button>
+                    <button id="unlock" class="bg-white/10 hover:bg-white/20 p-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition">
+                        <span>🔓 RELEASE LOCK</span>
+                    </button>
                 </div>
             </div>
-
-            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                <h3 class="font-bold mb-4">Send Announcement</h3>
-                <textarea id="announcement_msg" placeholder="Type message here..." class="w-full border p-2 rounded mb-2"></textarea>
-                <button id="send_announcement" class="w-full bg-indigo-600 text-white px-4 py-2 rounded">Broadcast</button>
-            </div>
         </div>
-    </div>
+    </main>
 </div>
 
 <script>
-// --- CONFIGURATION ---
+// --- CONFIG ---
 const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc'; // Ensure this is your public key
+const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// --- TAB LOGIC ---
-function openTab(evt, tabName) {
-    const contents = document.getElementsByClassName("tab-content");
-    for (let content of contents) content.classList.remove("active");
-    
-    const buttons = document.getElementsByClassName("tab-btn");
-    for (let btn of buttons) btn.classList.remove("active");
+let activeExpiry = null;
 
-    document.getElementById(tabName).classList.add("active");
-    evt.currentTarget.classList.add("active");
+// --- UTILS ---
+function openTab(evt, tabName) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('bg-white', 'shadow-sm', 'text-gray-900');
+        b.classList.add('text-gray-500');
+    });
+    
+    document.getElementById(tabName).classList.add('active');
+    evt.currentTarget.classList.add('bg-white', 'shadow-sm', 'text-gray-900');
+    evt.currentTarget.classList.remove('text-gray-500');
 }
 
-// --- DATA LOGIC ---
+function updateTime() {
+    const now = new Date();
+    document.getElementById('current-time').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+}
+setInterval(updateTime, 1000);
+
+// --- ANNOUNCEMENT LOGIC ---
+function updateStatusUI() {
+    const statusCard = document.getElementById('status-card');
+    const statusText = document.getElementById('status-text');
+    
+    if (!activeExpiry) {
+        statusText.innerText = "No Active Announcement";
+        statusText.className = "font-mono font-bold text-gray-400";
+        statusCard.className = "mb-6 p-4 rounded-2xl text-center border-2 border-dashed border-gray-200 bg-transparent";
+        return;
+    }
+
+    const now = new Date();
+    const diff = activeExpiry - now;
+
+    if (diff <= 0) {
+        statusText.innerText = "Announcement Expired";
+        statusText.className = "font-mono font-bold text-orange-500";
+        statusCard.className = "mb-6 p-4 rounded-2xl text-center border-2 border-orange-200 bg-orange-50";
+        activeExpiry = null;
+    } else {
+        const mins = Math.floor(diff / 1000 / 60);
+        const secs = Math.floor((diff / 1000) % 60);
+        statusText.innerText = `ACTIVE • ${mins}m ${secs}s LEFT`;
+        statusText.className = "font-mono font-bold text-green-600";
+        statusCard.className = "mb-6 p-4 rounded-2xl text-center border-2 border-green-500 bg-green-50 shadow-inner";
+    }
+}
+setInterval(updateStatusUI, 1000);
+
+// --- DATABASE OPERATIONS ---
 document.addEventListener('DOMContentLoaded', async function() {
     const listDiv = document.getElementById('family-list');
 
     async function loadFamilies() {
-        const { data, error } = await supabaseClient
-            .from('families')
-            .select('*')
-            .order('check_in_date', { ascending: true });
-
-        if (error) {
-            console.error(error);
-            return;
-        }
-
+        const { data } = await supabaseClient.from('families').select('*').order('check_in_date', { ascending: true });
         listDiv.innerHTML = '';
         if (!data || data.length === 0) {
-            listDiv.innerHTML = "<div class='bg-gray-100 p-4 rounded text-center text-gray-500'>No active reservations.</div>";
+            listDiv.innerHTML = "<p class='text-gray-400 italic py-4'>No guests currently registered.</p>";
             return;
         }
-
         data.forEach(f => {
             const card = document.createElement('div');
-            card.className = "bg-white p-4 rounded shadow-sm border border-gray-200 flex justify-between items-center";
+            card.className = "bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center group hover:border-blue-200 transition";
             card.innerHTML = `
                 <div>
-                    <div class="font-bold text-lg">${f.last_name} Family</div>
-                    <div class="text-sm text-gray-500">${f.check_in_date} to ${f.check_out_date}</div>
+                    <h3 class="font-black text-gray-800 text-lg uppercase">${f.last_name}</h3>
+                    <p class="text-xs font-bold text-gray-400 tracking-wider">${f.check_in_date} &rarr; ${f.check_out_date}</p>
                 </div>
-                <button onclick="checkout('${f.id}')" class="text-red-600 border border-red-600 px-3 py-1 rounded hover:bg-red-50 text-sm">Check Out</button>
+                <button onclick="checkout('${f.id}')" class="bg-red-50 text-red-500 px-4 py-2 rounded-xl text-xs font-black opacity-0 group-hover:opacity-100 transition">CHECK OUT</button>
             `;
             listDiv.appendChild(card);
         });
     }
 
-    // Global checkout function
     window.checkout = async function(id) {
-        if (!confirm("Are you sure you want to check out this family?")) return;
-        const { error } = await supabaseClient.from('families').delete().eq('id', id);
-        if (!error) loadFamilies();
-    };
-
-    // Create Guest
-    document.getElementById('create').onclick = async () => {
-        const ln = document.getElementById('last_name').value;
-        const ci = document.getElementById('check_in').value;
-        const co = document.getElementById('check_out').value;
-
-        if (!ln || !ci || !co) { alert("Please fill in all guest details."); return; }
-
-        const { error } = await supabaseClient.from('families').upsert({ 
-            last_name: ln, 
-            check_in_date: ci, 
-            check_out_date: co 
-        });
-
-        if (error) {
-            alert("Error saving: " + error.message);
-        } else {
-            document.getElementById('last_name').value = '';
+        if(confirm("Complete checkout for this family?")) {
+            await supabaseClient.from('families').delete().eq('id', id);
             loadFamilies();
         }
     };
 
-    // Announcement Logic
+    document.getElementById('create').onclick = async () => {
+        const ln = document.getElementById('last_name').value;
+        const ci = document.getElementById('check_in').value;
+        const co = document.getElementById('check_out').value;
+        if (!ln || !ci || !co) return alert("All fields required");
+
+        await supabaseClient.from('families').upsert({ last_name: ln, check_in_date: ci, check_out_date: co });
+        document.getElementById('last_name').value = '';
+        loadFamilies();
+    };
+
+    // --- ANNOUNCEMENT BUTTONS ---
+    async function syncAnnouncement() {
+        const { data } = await supabaseClient.from('announcements').select('*').limit(1).maybeSingle();
+        if (data && data.expires_at) {
+            activeExpiry = new Date(data.expires_at);
+        } else {
+            activeExpiry = null;
+        }
+    }
+
     document.getElementById('send_announcement').onclick = async () => {
         const msg = document.getElementById('announcement_msg').value.trim();
-        if (!msg) return;
-        
-        const { error } = await supabaseClient.from('announcements').insert({ message: msg });
+        const mins = parseInt(document.getElementById('duration_mins').value);
+        if (!msg) return alert("Please enter a message");
+
+        const expiryDate = new Date();
+        expiryDate.setMinutes(expiryDate.getMinutes() + mins);
+
+        // Delete previous (Ensure table is clean)
+        await supabaseClient.from('announcements').delete().neq('message', 'CLEAR_ALL');
+
+        // Insert new
+        const { error } = await supabaseClient.from('announcements').insert({
+            message: msg,
+            expires_at: expiryDate.toISOString()
+        });
+
         if (!error) {
+            activeExpiry = expiryDate;
             document.getElementById('announcement_msg').value = '';
-            alert("Announcement broadcasted successfully!");
+            alert("Announcement Pushed!");
         }
     };
 
-    // Placeholder actions
-    document.getElementById('lock').onclick = () => alert("Instruction sent to lock all tablets.");
-    document.getElementById('unlock').onclick = () => alert("Instruction sent to unlock all tablets.");
+    document.getElementById('clear_announcement').onclick = async () => {
+        await supabaseClient.from('announcements').delete().neq('message', 'CLEAR_ALL');
+        activeExpiry = null;
+    };
 
     loadFamilies();
+    syncAnnouncement();
 });
+
+document.getElementById('lock').onclick = () => alert("Instruction: LOCK sent to tablets.");
+document.getElementById('unlock').onclick = () => alert("Instruction: UNLOCK sent to tablets.");
 </script>
 </body>
 </html>
