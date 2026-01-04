@@ -30,18 +30,17 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', async function() {
-  // Initialize Supabase first
   const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // Load families
+  const listDiv = document.getElementById('family-list');
+
   async function loadFamilies(){
     const { data } = await supabaseClient.from('families').select('*');
-    const list = document.getElementById('family-list');
-    list.innerHTML = '';
-    if(!data || data.length === 0){
-      list.innerHTML = "<p>No families currently created.</p>";
+    listDiv.innerHTML='';
+    if(!data || data.length===0){
+      listDiv.innerHTML="<p>No families currently created.</p>";
       return;
     }
     data.forEach(f=>{
@@ -49,17 +48,15 @@ document.addEventListener('DOMContentLoaded', async function() {
       div.classList.add('family');
       div.innerHTML = `<b>${f.last_name}s</b> | ${f.check_in_date} → ${f.check_out_date} 
         <button onclick="checkout('${f.id}')">Check Out</button>`;
-      list.appendChild(div);
+      listDiv.appendChild(div);
     });
   }
 
-  // Checkout function
   window.checkout = async function(id){
     await supabaseClient.from('families').update({checked_in:false}).eq('id',id);
     loadFamilies();
   }
 
-  // Create / update family
   document.getElementById('create').onclick = async ()=>{
     const ln = document.getElementById('last_name').value;
     const ci = document.getElementById('check_in').value;
@@ -69,15 +66,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     loadFamilies();
   }
 
-  // Send announcement
   document.getElementById('send_announcement').onclick = async ()=>{
-    const msg = document.getElementById('announcement_msg').value;
+    const msg = document.getElementById('announcement_msg').value.trim();
     if(!msg) return;
     await supabaseClient.from('announcements').insert({message: msg});
-    document.getElementById('announcement_msg').value = '';
+    document.getElementById('announcement_msg').value='';
+    alert("Announcement sent!");
   }
 
-  // Lock / Unlock placeholders
   document.getElementById('lock').onclick = ()=> alert("Tablets locked (placeholder)");
   document.getElementById('unlock').onclick = ()=> alert("Tablets unlocked (placeholder)");
 
