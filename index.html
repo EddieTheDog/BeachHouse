@@ -7,62 +7,77 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  #message-list::-webkit-scrollbar { width: 4px; }
-  #message-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-  .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 12px; }
-  .day { aspect-ratio: 1/1; border-radius: 10px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight: 600; }
-  .past { background-color:#f1f5f9; color:#94a3b8; text-decoration: line-through; }
-  .current { background-color:#2563eb; color:white; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3); }
-  .future { background-color:#ffffff; color:#334155; border: 1px solid #e2e8f0; }
-  .locked-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.95); display:none; flex-direction: column; align-items:center; justify-content:center; color:white; z-index:100; backdrop-filter: blur(10px); }
+  #login-screen { position:fixed; inset:0; background:#f8fafc; z-index:50; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #cbd5e1; transition: all 0.2s; }
+  .pin-dot.filled { background: #2563eb; border-color: #2563eb; transform: scale(1.2); }
+  .keypad-btn { width: 75px; height: 75px; border-radius: 50%; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 1.5rem; font-weight: 700; transition: all 0.1s; }
+  .keypad-btn:active { transform: scale(0.9); background: #f1f5f9; }
 </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 min-h-screen">
 
-<div class="locked-overlay" id="locked-overlay">
-    <div class="text-center">
-        <span class="text-6xl block mb-4">🔒</span>
-        <h2 class="text-2xl font-bold uppercase tracking-widest">Device Locked</h2>
-        <p class="text-slate-400 mt-2">Please contact the host.</p>
+<div id="login-screen">
+    <div class="text-center mb-10">
+        <h1 id="welcome-title" class="text-5xl font-black mb-2 tracking-tighter">Welcome</h1>
+        <p id="instruction-text" class="text-slate-500 font-bold uppercase tracking-widest text-xs">Enter your access code</p>
+    </div>
+    
+    <div class="flex gap-4 mb-10">
+        <div class="pin-dot" id="dot-0"></div>
+        <div class="pin-dot" id="dot-1"></div>
+        <div class="pin-dot" id="dot-2"></div>
+        <div class="pin-dot" id="dot-3"></div>
+        <div class="pin-dot" id="dot-4"></div>
+        <div class="pin-dot" id="dot-5"></div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-6">
+        <button onclick="pressKey('1')" class="keypad-btn">1</button>
+        <button onclick="pressKey('2')" class="keypad-btn">2</button>
+        <button onclick="pressKey('3')" class="keypad-btn">3</button>
+        <button onclick="pressKey('4')" class="keypad-btn">4</button>
+        <button onclick="pressKey('5')" class="keypad-btn">5</button>
+        <button onclick="pressKey('6')" class="keypad-btn">6</button>
+        <button onclick="pressKey('7')" class="keypad-btn">7</button>
+        <button onclick="pressKey('8')" class="keypad-btn">8</button>
+        <button onclick="pressKey('9')" class="keypad-btn">9</button>
+        <button onclick="clearPin()" class="text-red-500 font-bold text-sm">Clear</button>
+        <button onclick="pressKey('0')" class="keypad-btn">0</button>
+        <button onclick="submitPin()" class="text-blue-600 font-bold text-sm">Enter</button>
     </div>
 </div>
 
-<div class="max-w-xl mx-auto p-4 md:p-8">
-  <header class="flex justify-between items-end mb-8">
-    <div>
-        <h1 class="text-3xl font-black text-slate-900 leading-none">The Beach House</h1>
-        <p id="current-time" class="text-blue-600 font-bold text-sm mt-2"></p>
-    </div>
-  </header>
+<div id="main-app" class="hidden">
+    <div class="max-w-xl mx-auto p-4 md:p-8">
+        <header class="flex justify-between items-end mb-8">
+            <h1 class="text-3xl font-black text-slate-900 leading-none tracking-tighter">The Beach House</h1>
+            <p id="current-time" class="text-blue-600 font-bold text-sm"></p>
+        </header>
 
-  <main class="space-y-4">
-    <div id="announcement-banner" class="hidden transform transition-all duration-500">
-        <div class="bg-indigo-600 text-white p-5 rounded-[2rem] shadow-lg flex items-center gap-4">
-            <span class="text-2xl animate-bounce">📢</span>
-            <div>
-                <p class="text-[10px] font-bold uppercase tracking-widest opacity-70">Host Announcement</p>
-                <p id="announcement-text" class="font-bold text-lg leading-tight"></p>
+        <main class="space-y-4">
+            <div id="announcement-banner" class="hidden">
+                <div class="bg-indigo-600 text-white p-5 rounded-[2rem] flex items-center gap-4 shadow-lg">
+                    <span class="text-2xl">📢</span>
+                    <p id="announcement-text" class="font-bold leading-tight"></p>
+                </div>
             </div>
-        </div>
-    </div>
 
-    <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
-        <h2 class="text-2xl font-bold text-slate-800" id="welcome-text">Loading...</h2>
-        <p id="days-left" class="text-slate-500 font-medium mb-4 text-sm"></p>
-        <div class="pt-4 border-t border-slate-100">
-            <div id="calendar" class="calendar"></div>
-        </div>
-    </div>
+            <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
+                <h2 class="text-2xl font-bold mb-1" id="portal-welcome"></h2>
+                <p id="days-left" class="text-slate-400 text-sm font-medium mb-4"></p>
+                <div id="calendar" class="grid grid-cols-7 gap-2 pt-4 border-t border-slate-100"></div>
+            </div>
 
-    <section class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
-      <h3 class="font-bold text-slate-800 mb-4 px-1">Host Chat</h3>
-      <div id="message-list" class="max-h-80 overflow-y-auto space-y-3 mb-4 pr-1 flex flex-col"></div>
-      <div class="flex gap-2 bg-slate-100 p-2 rounded-2xl">
-        <input type="text" id="guest-msg" class="bg-transparent px-4 py-2 flex-1 outline-none text-slate-700" placeholder="Type a message..." disabled>
-        <button id="send-guest-msg" class="bg-blue-600 text-white px-5 py-2 rounded-xl font-bold disabled:opacity-50" disabled>Send</button>
-      </div>
-    </section>
-  </main>
+            <section class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
+                <h3 class="font-bold mb-4 px-1">Message Host</h3>
+                <div id="message-list" class="max-h-60 overflow-y-auto space-y-3 flex flex-col mb-4 pr-2"></div>
+                <div class="flex gap-2 bg-slate-100 p-2 rounded-2xl">
+                    <input type="text" id="guest-msg" class="bg-transparent px-4 py-2 flex-1 outline-none" placeholder="Type here...">
+                    <button id="send-guest-msg" class="bg-blue-600 text-white px-5 py-2 rounded-xl font-bold">Send</button>
+                </div>
+            </section>
+        </main>
+    </div>
 </div>
 
 <script>
@@ -71,13 +86,112 @@ const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentGuest = null;
-let guestLock = false;
+let pinInput = "";
+
+// 1. AUTO-WELCOME LOGIC (Find who is staying here today)
+async function findCurrentGuest() {
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await supabaseClient.from('families')
+        .select('*')
+        .lte('check_in_date', today)
+        .gte('check_out_date', today)
+        .order('created_at', { ascending: false })
+        .limit(1).maybeSingle();
+
+    if (data) {
+        currentGuest = data;
+        document.getElementById('welcome-title').innerText = `Welcome, ${data.last_name}s!`;
+    }
+}
+
+// 2. PIN PAD LOGIC
+function pressKey(num) {
+    if (pinInput.length < 6) {
+        pinInput += num;
+        updatePinDisplay();
+    }
+    if (pinInput.length === 6) { 
+        setTimeout(submitPin, 200); 
+    }
+}
+
+function clearPin() { 
+    pinInput = ""; 
+    document.getElementById('instruction-text').innerText = "Enter your access code";
+    document.getElementById('instruction-text').classList.remove('text-red-500');
+    updatePinDisplay(); 
+}
+
+function updatePinDisplay() {
+    for (let i = 0; i < 6; i++) {
+        const dot = document.getElementById(`dot-${i}`);
+        dot.className = i < pinInput.length ? "pin-dot filled" : "pin-dot";
+    }
+}
+
+async function submitPin() {
+    // If input matches the current guest's code
+    if (currentGuest && pinInput === currentGuest.access_code) {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('main-app').classList.remove('hidden');
+        initApp();
+    } else {
+        // WRONG CODE LOGIC
+        document.getElementById('instruction-text').innerText = "WRONG CODE";
+        document.getElementById('instruction-text').classList.add('text-red-500');
+        pinInput = "";
+        setTimeout(updatePinDisplay, 300);
+    }
+}
+
+// 3. MAIN APP LOGIC
+function initApp() {
+    document.getElementById('portal-welcome').innerText = `${currentGuest.last_name} Residence`;
+    renderCalendar();
+    loadMessages();
+    setInterval(loadMessages, 5000);
+    checkAnnouncements();
+    setInterval(checkAnnouncements, 10000);
+    updateTime();
+    setInterval(updateTime, 1000);
+}
 
 function updateTime() {
     const now = new Date();
     document.getElementById('current-time').innerText = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 }
-setInterval(updateTime, 1000);
+
+function renderCalendar() {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const checkin = new Date(currentGuest.check_in_date);
+    const checkout = new Date(currentGuest.check_out_date);
+    const calDiv = document.getElementById('calendar');
+    calDiv.innerHTML = '';
+
+    const diff = Math.ceil((checkout - today) / (1000*60*60*24));
+    document.getElementById('days-left').innerText = `${diff} nights remaining`;
+
+    for(let d = new Date(checkin); d <= checkout; d.setDate(d.getDate()+1)){
+        const day = document.createElement('div');
+        const dCopy = new Date(d);
+        const isPast = dCopy < today;
+        const isToday = dCopy.toDateString() === today.toDateString();
+        day.className = `aspect-square flex items-center justify-center rounded-xl font-bold text-xs ${isPast ? 'bg-slate-50 text-slate-300 line-through' : isToday ? 'bg-blue-600 text-white shadow-lg' : 'bg-white border border-slate-200 text-slate-600'}`;
+        day.innerText = d.getDate();
+        calDiv.appendChild(day);
+    }
+}
+
+async function loadMessages(){
+    const { data } = await supabaseClient.from('messages').select('*').eq('family_id', currentGuest.id).order('created_at', {ascending:true});
+    const list = document.getElementById('message-list');
+    list.innerHTML = data?.map(m => `
+        <div class="p-3 rounded-2xl text-sm ${m.sent_by==='guest' ? 'bg-blue-600 text-white self-end ml-10':'bg-slate-100 text-slate-700 self-start mr-10 shadow-sm'}">
+            ${m.message}
+        </div>
+    `).join('') || '';
+    list.scrollTop = list.scrollHeight;
+}
 
 async function checkAnnouncements() {
     const { data } = await supabaseClient.from('announcements').select('*').limit(1).maybeSingle();
@@ -85,83 +199,19 @@ async function checkAnnouncements() {
     if (data && new Date(data.expires_at) > new Date()) {
         document.getElementById('announcement-text').innerText = data.message;
         banner.classList.remove('hidden');
-    } else {
-        banner.classList.add('hidden');
-    }
+    } else { banner.classList.add('hidden'); }
 }
-setInterval(checkAnnouncements, 10000);
-
-async function guestLogin() {
-    const todayISO = new Date().toISOString().split('T')[0];
-    let lastName = localStorage.getItem('guest_last_name');
-    if(!lastName){
-        lastName = prompt("Enter Last Name:");
-        if(lastName) localStorage.setItem('guest_last_name', lastName);
-    }
-    const { data } = await supabaseClient.from('families').select('*').eq('last_name', lastName).gte('check_out_date', todayISO).maybeSingle();
-    if(data){
-        currentGuest = data;
-        document.getElementById('guest-msg').disabled = false;
-        document.getElementById('send-guest-msg').disabled = false;
-        renderGuestInfo();
-        loadMessages();
-        checkAnnouncements();
-    } else {
-        document.getElementById('welcome-text').innerText = "Access Restricted";
-    }
-}
-
-function renderGuestInfo(){
-    document.getElementById('welcome-text').innerText = `Welcome, ${currentGuest.last_name} family!`;
-    const today = new Date(); today.setHours(0,0,0,0);
-    const checkout = new Date(currentGuest.check_out_date);
-    const checkin = new Date(currentGuest.check_in_date);
-    const daysLeft = Math.max(Math.ceil((checkout - today) / (1000*60*60*24)), 0);
-    document.getElementById('days-left').innerText = `${daysLeft} days remaining`;
-
-    const calendarDiv = document.getElementById('calendar');
-    calendarDiv.innerHTML = '';
-    for(let d = new Date(checkin); d <= checkout; d.setDate(d.getDate()+1)){
-        const dayDiv = document.createElement('div');
-        const dateCopy = new Date(d);
-        dayDiv.className = `day ${dateCopy < today ? 'past' : (dateCopy.toDateString() === today.toDateString() ? 'current' : 'future')}`;
-        dayDiv.innerText = d.getDate();
-        calendarDiv.appendChild(dayDiv);
-    }
-}
-
-async function loadMessages(){
-    if(!currentGuest) return;
-    const { data: msgs } = await supabaseClient.from('messages').select('*').eq('family_id', currentGuest.id).order('created_at',{ ascending:true });
-    const list = document.getElementById('message-list');
-    list.innerHTML = '';
-    msgs?.forEach(m => {
-        const isMe = m.sent_by === 'guest';
-        const div = document.createElement('div');
-        div.className = `p-3 rounded-2xl text-sm ${isMe ? 'bg-blue-600 text-white self-end ml-8' : 'bg-slate-100 text-slate-800 self-start mr-8'}`;
-        div.innerHTML = `<div class="font-black text-[9px] uppercase opacity-60 mb-1">${isMe ? 'You' : 'Host'}</div><div>${m.message}</div>`;
-        list.appendChild(div);
-    });
-    list.scrollTop = list.scrollHeight;
-}
-setInterval(loadMessages, 5000);
 
 document.getElementById('send-guest-msg').onclick = async () => {
     const msgInput = document.getElementById('guest-msg');
     const msg = msgInput.value.trim();
-    if(!msg || guestLock) return;
+    if(!msg) return;
     await supabaseClient.from('messages').insert({ family_id: currentGuest.id, message: msg, sent_by: 'guest' });
     msgInput.value = '';
     loadMessages();
 };
 
-async function checkLock(){
-    const { data } = await supabaseClient.from('tablet_lock').select('*').eq('id',1).maybeSingle();
-    guestLock = data?.is_locked || false;
-    document.getElementById('locked-overlay').style.display = guestLock ? 'flex' : 'none';
-}
-setInterval(checkLock, 3000);
-guestLogin();
+findCurrentGuest();
 </script>
 </body>
 </html>
