@@ -1,75 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Admin</title>
+<meta charset="UTF-8"><title>Admin Panel</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-100 font-sans p-8">
-
-<div class="max-w-4xl mx-auto">
-    <header class="mb-8">
-        <h1 class="text-3xl font-black italic tracking-tighter">HOST CONTROL</h1>
-    </header>
-
-    <section class="bg-white p-8 rounded-[2rem] shadow-sm mb-8">
-        <h2 class="font-bold text-lg mb-4">Register Family</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <input type="text" id="last_name" placeholder="Last Name (e.g. Miller)" class="border p-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600">
-            <input type="date" id="check_in" class="border p-4 rounded-2xl">
-            <input type="date" id="check_out" class="border p-4 rounded-2xl">
+<body class="bg-slate-100 p-8 font-sans">
+    <div class="max-w-2xl mx-auto space-y-6">
+        <div class="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-200">
+            <h1 class="text-3xl font-black mb-8 uppercase tracking-tighter">Register New Guest</h1>
+            <div class="space-y-4">
+                <input type="text" id="ln" placeholder="Guest Last Name" class="w-full border p-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500">
+                <div class="flex gap-4">
+                    <input type="date" id="ci" class="flex-1 border p-4 rounded-2xl">
+                    <input type="date" id="co" class="flex-1 border p-4 rounded-2xl">
+                </div>
+                <button id="add" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-lg hover:bg-blue-700 shadow-lg shadow-blue-200 transition">GENERATE STAY & PIN</button>
+            </div>
         </div>
-        <button id="create-btn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-lg hover:bg-blue-700 transition">GENERATE STAY & CODE</button>
-    </section>
 
-    <div id="guest-list" class="space-y-4"></div>
-</div>
+        <div id="list" class="space-y-3"></div>
+    </div>
 
 <script>
 const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-function generatePIN() { return Math.floor(100000 + Math.random() * 900000).toString(); }
+document.getElementById('add').onclick = async () => {
+    const last = document.getElementById('ln').value;
+    const inD = document.getElementById('ci').value;
+    const outD = document.getElementById('co').value;
+    // Generate a clean 6-digit PIN
+    const pin = Math.floor(100000 + Math.random() * 900000).toString();
 
-document.getElementById('create-btn').onclick = async () => {
-    const ln = document.getElementById('last_name').value;
-    const ci = document.getElementById('check_in').value;
-    const co = document.getElementById('check_out').value;
-    const pin = generatePIN();
+    if(!last || !inD || !outD) return alert("Please fill in all guest details.");
 
-    if(!ln || !ci || !co) return alert("Fill all info!");
-
-    await supabaseClient.from('families').insert({ 
-        last_name: ln, check_in_date: ci, check_out_date: co, access_code: pin 
+    const { error } = await supabaseClient.from('families').insert({
+        last_name: last, 
+        check_in_date: inD, 
+        check_out_date: outD, 
+        access_code: pin
     });
-    
-    document.getElementById('last_name').value = '';
-    alert(`Success! Tell the ${ln} family their code is: ${pin}`);
-    loadGuests();
+
+    if(!error) {
+        alert(`Success! The ${last} family code is: ${pin}`);
+        document.getElementById('ln').value = '';
+        loadGuests();
+    } else { alert("Error: " + error.message); }
 };
 
 async function loadGuests() {
-    const { data } = await supabaseClient.from('families').select('*').order('check_in_date', {ascending: true});
-    const list = document.getElementById('guest-list');
-    list.innerHTML = data?.map(f => `
-        <div class="bg-white p-6 rounded-2xl flex justify-between items-center border border-slate-200 shadow-sm">
+    const { data } = await supabaseClient.from('families').select('*').order('created_at', {ascending:false});
+    const container = document.getElementById('list');
+    container.innerHTML = data?.map(f => `
+        <div class="p-6 bg-white rounded-2xl border border-slate-200 flex justify-between items-center shadow-sm">
             <div>
-                <h3 class="font-black text-xl uppercase">${f.last_name} Family</h3>
-                <p class="text-blue-600 font-mono font-black text-lg">CODE: ${f.access_code}</p>
+                <p class="font-black text-xl uppercase tracking-tighter">${f.last_name} FAMILY</p>
+                <p class="text-blue-600 font-mono font-black text-lg">PIN: ${f.access_code}</p>
             </div>
-            <div class="text-right">
-                <p class="text-xs font-bold text-slate-400 uppercase">${f.check_in_date} to ${f.check_out_date}</p>
-                <button onclick="del('${f.id}')" class="text-red-500 font-bold text-xs mt-2 hover:underline">Delete Guest</button>
+            <div class="flex flex-col items-end">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${f.check_in_date} TO ${f.check_out_date}</p>
+                <button onclick="del('${f.id}')" class="text-red-500 font-bold text-xs mt-2 hover:underline">Delete Stay</button>
             </div>
         </div>
     `).join('') || '';
 }
 
 window.del = async (id) => {
-    if(confirm("Delete this guest?")) {
+    if(confirm("Permanently delete this guest stay?")) {
         await supabaseClient.from('families').delete().eq('id', id);
         loadGuests();
     }
