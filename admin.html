@@ -33,11 +33,11 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Initialize Supabase first
   const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // Load families and display
+  // Load families
   async function loadFamilies(){
-    const { data } = await supabase.from('families').select('*');
+    const { data } = await supabaseClient.from('families').select('*');
     const list = document.getElementById('family-list');
     list.innerHTML = '';
     if(!data || data.length === 0){
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   // Checkout function
   window.checkout = async function(id){
-    await supabase.from('families').update({checked_in:false}).eq('id',id);
+    await supabaseClient.from('families').update({checked_in:false}).eq('id',id);
     loadFamilies();
   }
 
@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const ci = document.getElementById('check_in').value;
     const co = document.getElementById('check_out').value;
     if(!ln || !ci || !co){ alert("Fill all fields"); return; }
-    await supabase.from('families').upsert({last_name: ln, check_in_date: ci, check_out_date: co});
+    await supabaseClient.from('families').upsert({last_name: ln, check_in_date: ci, check_out_date: co});
     loadFamilies();
   }
 
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.getElementById('send_announcement').onclick = async ()=>{
     const msg = document.getElementById('announcement_msg').value;
     if(!msg) return;
-    await supabase.from('announcements').insert({message: msg});
+    await supabaseClient.from('announcements').insert({message: msg});
     document.getElementById('announcement_msg').value = '';
   }
 
