@@ -23,7 +23,6 @@
     <div class="text-center">
         <span class="text-6xl block mb-4">🔒</span>
         <h2 class="text-2xl font-bold uppercase tracking-widest">Device Locked</h2>
-        <p class="text-slate-400 mt-2">Access restricted by host</p>
     </div>
 </div>
 
@@ -31,33 +30,35 @@
   <header class="flex justify-between items-end mb-8">
     <div>
         <h1 class="text-3xl font-black text-slate-900 leading-none">The Beach House</h1>
-        <p class="text-blue-600 font-bold text-xs uppercase tracking-widest mt-2">Guest Services</p>
+        <p id="current-time" class="text-blue-600 font-bold text-sm mt-2"></p>
     </div>
-    <p id="current-time" class="text-xl font-mono font-bold text-slate-600"></p>
   </header>
 
   <main class="space-y-4">
+    <div id="announcement-banner" class="hidden transform transition-all duration-500">
+        <div class="bg-indigo-600 text-white p-5 rounded-[2rem] shadow-lg flex items-center gap-4">
+            <span class="text-2xl animate-bounce">📢</span>
+            <div>
+                <p class="text-[10px] font-bold uppercase tracking-widest opacity-70">Important Announcement</p>
+                <p id="announcement-text" class="font-bold text-lg leading-tight"></p>
+            </div>
+        </div>
+    </div>
+
     <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
         <h2 class="text-2xl font-bold text-slate-800" id="welcome-text">Checking in...</h2>
         <p id="days-left" class="text-slate-500 font-medium mb-4 text-sm"></p>
-        
         <div class="pt-4 border-t border-slate-100">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-2">Stay Calendar</p>
             <div id="calendar" class="calendar"></div>
         </div>
     </div>
 
     <section class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
-      <h3 class="font-bold text-slate-800 mb-4 px-1">Messages</h3>
-      
-      <div id="message-list" class="max-h-80 overflow-y-auto space-y-3 mb-4 pr-1">
-          </div>
-
+      <h3 class="font-bold text-slate-800 mb-4 px-1">Messages with Host</h3>
+      <div id="message-list" class="max-h-80 overflow-y-auto space-y-3 mb-4 pr-1 flex flex-col"></div>
       <div class="flex gap-2 bg-slate-100 p-2 rounded-2xl">
-        <input type="text" id="guest-msg" class="bg-transparent px-4 py-2 flex-1 outline-none text-slate-700 placeholder-slate-400" placeholder="Need anything? Ask here..." disabled>
-        <button id="send-guest-msg" class="bg-blue-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50" disabled>
-            Send
-        </button>
+        <input type="text" id="guest-msg" class="bg-transparent px-4 py-2 flex-1 outline-none text-slate-700" placeholder="Type a message..." disabled>
+        <button id="send-guest-msg" class="bg-blue-600 text-white px-5 py-2 rounded-xl font-bold disabled:opacity-50" disabled>Send</button>
       </div>
     </section>
   </main>
@@ -77,116 +78,86 @@ function updateTime() {
 }
 setInterval(updateTime, 1000);
 
+async function checkAnnouncements() {
+    const { data } = await supabaseClient.from('announcements').select('*').limit(1).maybeSingle();
+    const banner = document.getElementById('announcement-banner');
+    const text = document.getElementById('announcement-text');
+    if (data && new Date(data.expires_at) > new Date()) {
+        text.innerText = data.message;
+        banner.classList.remove('hidden');
+    } else {
+        banner.classList.add('hidden');
+    }
+}
+setInterval(checkAnnouncements, 10000);
+
 async function guestLogin() {
     const todayISO = new Date().toISOString().split('T')[0];
     let lastName = localStorage.getItem('guest_last_name');
     let guest;
-
     if(lastName){
-        const { data } = await supabaseClient.from('families')
-            .select('*')
-            .eq('last_name', lastName)
-            .gte('check_out_date', todayISO)
-            .maybeSingle();
+        const { data } = await supabaseClient.from('families').select('*').eq('last_name', lastName).gte('check_out_date', todayISO).maybeSingle();
         guest = data;
     }
-
     if(!guest){
-        lastName = prompt("Enter your last name to access the portal:");
+        lastName = prompt("Enter your last name:");
         if(!lastName) return guestLogin();
-        
-        const { data } = await supabaseClient.from('families')
-            .select('*')
-            .eq('last_name', lastName)
-            .gte('check_out_date', todayISO)
-            .maybeSingle();
-
-        if(!data){
-            document.getElementById('welcome-text').innerText = "Reservation not found";
-            return;
-        }
+        const { data } = await supabaseClient.from('families').select('*').eq('last_name', lastName).gte('check_out_date', todayISO).maybeSingle();
+        if(!data) { document.getElementById('welcome-text').innerText = "Access Denied"; return; }
         guest = data;
         localStorage.setItem('guest_last_name', lastName);
     }
-
     currentGuest = guest;
     document.getElementById('guest-msg').disabled = false;
     document.getElementById('send-guest-msg').disabled = false;
-    
     renderGuestInfo();
     loadMessages();
+    checkAnnouncements();
 }
 
 function renderGuestInfo(){
-    if(!currentGuest) return;
     document.getElementById('welcome-text').innerText = `Hello, ${currentGuest.last_name}s!`;
-
-    const today = new Date();
-    today.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0,0,0,0);
     const checkout = new Date(currentGuest.check_out_date);
     const checkin = new Date(currentGuest.check_in_date);
-
-    const timeDiff = checkout - today;
-    const daysLeft = Math.max(Math.ceil(timeDiff / (1000*60*60*24)), 0);
-    document.getElementById('days-left').innerText = `You have ${daysLeft} days left in your paradise stay.`;
+    const daysLeft = Math.max(Math.ceil((checkout - today) / (1000*60*60*24)), 0);
+    document.getElementById('days-left').innerText = `${daysLeft} days remaining`;
 
     const calendarDiv = document.getElementById('calendar');
     calendarDiv.innerHTML = '';
     for(let d = new Date(checkin); d <= checkout; d.setDate(d.getDate()+1)){
         const dayDiv = document.createElement('div');
-        dayDiv.className = 'day';
         const dateCopy = new Date(d);
-        if(dateCopy < today) dayDiv.classList.add('past');
-        else if(dateCopy.toDateString() === today.toDateString()) dayDiv.classList.add('current');
-        else dayDiv.classList.add('future');
+        dayDiv.className = `day ${dateCopy < today ? 'past' : (dateCopy.toDateString() === today.toDateString() ? 'current' : 'future')}`;
         dayDiv.innerText = d.getDate();
         calendarDiv.appendChild(dayDiv);
     }
 }
 
-// --- UPDATED TO MATCH YOUR messages TABLE ---
 async function loadMessages(){
     if(!currentGuest) return;
-    const { data: msgs } = await supabaseClient.from('messages')
-        .select('*')
-        .eq('family_id', currentGuest.id) // Filter to only see this guest's thread
-        .order('created_at',{ ascending:true });
-
+    const { data: msgs } = await supabaseClient.from('messages').select('*').eq('family_id', currentGuest.id).order('created_at',{ ascending:true });
     const list = document.getElementById('message-list');
     list.innerHTML = '';
-    if(!msgs) return;
-
-    msgs.forEach(m => {
+    msgs?.forEach(m => {
         const isMe = m.sent_by === 'guest';
         const div = document.createElement('div');
-        div.className = `p-3 rounded-2xl text-sm shadow-sm ${isMe ? 'bg-blue-600 text-white ml-8' : 'bg-white border border-slate-200 text-slate-800 mr-8'}`;
-        div.innerHTML = `
-            <div class="font-black text-[9px] uppercase tracking-widest opacity-60 mb-1">${isMe ? 'Your Message' : 'Host Response'}</div>
-            <div class="font-medium">${m.message}</div>
-        `;
+        div.className = `p-3 rounded-2xl text-sm ${isMe ? 'bg-blue-600 text-white self-end ml-8' : 'bg-slate-100 text-slate-800 self-start mr-8'}`;
+        div.innerHTML = `<div class="font-black text-[9px] uppercase opacity-60 mb-1">${isMe ? 'You' : 'Host'}</div><div>${m.message}</div>`;
         list.appendChild(div);
     });
     list.scrollTop = list.scrollHeight;
 }
-setInterval(loadMessages, 3000);
+setInterval(loadMessages, 5000);
 
-// --- UPDATED INSERT TO MATCH YOUR messages TABLE ---
 document.getElementById('send-guest-msg').onclick = async () => {
     if(guestLock || !currentGuest) return;
     const msgInput = document.getElementById('guest-msg');
-    const msgText = msgInput.value.trim();
-    if(!msgText) return;
-
-    const { error } = await supabaseClient.from('messages').insert({ 
-        family_id: currentGuest.id, // Links to public.families.id
-        message: msgText,
-        sent_by: 'guest'            // Records that the guest sent it
-    });
-
-    if(!error) {
-        msgInput.value = '';
-        loadMessages();
-    }
+    const msg = msgInput.value.trim();
+    if(!msg) return;
+    await supabaseClient.from('messages').insert({ family_id: currentGuest.id, message: msg, sent_by: 'guest' });
+    msgInput.value = '';
+    loadMessages();
 };
 
 async function checkLock(){
@@ -194,7 +165,7 @@ async function checkLock(){
     guestLock = data?.is_locked || false;
     document.getElementById('locked-overlay').style.display = guestLock ? 'flex' : 'none';
 }
-setInterval(checkLock, 2000);
+setInterval(checkLock, 3000);
 
 guestLogin();
 </script>
