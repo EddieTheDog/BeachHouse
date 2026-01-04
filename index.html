@@ -61,11 +61,11 @@ function updateTime() {
 }
 setInterval(updateTime, 1000);
 
-// --- SAFE GUEST LOGIN ---
+// --- SAFE AUTOMATIC LOGIN ---
 async function guestLogin() {
     const todayISO = new Date().toISOString().split('T')[0];
 
-    // Check if a guest last name is stored
+    // Check if guest is remembered
     let lastName = localStorage.getItem('guest_last_name');
 
     let guest;
@@ -95,7 +95,7 @@ async function guestLogin() {
             return;
         }
         guest = data;
-        localStorage.setItem('guest_last_name', lastName);
+        localStorage.setItem('guest_last_name', lastName); // REMEMBER FOR FUTURE
     }
 
     currentGuest = guest;
