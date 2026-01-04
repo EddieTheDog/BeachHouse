@@ -10,7 +10,7 @@
   #login-screen { position:fixed; inset:0; background:#f8fafc; z-index:50; display:flex; flex-direction:column; align-items:center; justify-content:center; }
   .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #cbd5e1; transition: all 0.2s; }
   .pin-dot.filled { background: #2563eb; border-color: #2563eb; transform: scale(1.2); }
-  .keypad-btn { width: 75px; height: 75px; border-radius: 50%; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 1.5rem; font-weight: 700; transition: all 0.1s; border: 1px solid #e2e8f0; }
+  .keypad-btn { width: 80px; height: 80px; border-radius: 50%; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-size: 1.5rem; font-weight: 700; transition: all 0.1s; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; }
   .keypad-btn:active { transform: scale(0.9); background: #f1f5f9; }
 </style>
 </head>
@@ -18,11 +18,11 @@
 
 <div id="login-screen">
     <div class="text-center mb-10">
-        <h1 class="text-5xl font-black mb-2 tracking-tighter">Welcome</h1>
-        <p id="instruction-text" class="text-slate-500 font-bold uppercase tracking-widest text-xs">Enter your 6-digit access code</p>
+        <h1 class="text-5xl font-black mb-2 tracking-tighter uppercase">Welcome</h1>
+        <p id="instruction-text" class="text-slate-500 font-bold uppercase tracking-widest text-xs">Enter your 6-digit code</p>
     </div>
     
-    <div class="flex gap-4 mb-10" id="dot-container">
+    <div class="flex gap-4 mb-10">
         <div class="pin-dot" id="dot-0"></div>
         <div class="pin-dot" id="dot-1"></div>
         <div class="pin-dot" id="dot-2"></div>
@@ -41,32 +41,32 @@
         <button onclick="pressKey('7')" class="keypad-btn">7</button>
         <button onclick="pressKey('8')" class="keypad-btn">8</button>
         <button onclick="pressKey('9')" class="keypad-btn">9</button>
-        <button onclick="clearPin()" class="text-red-500 font-bold text-sm">Clear</button>
-        <button onclick="pressKey('0')" class="keypad-btn">0</button>
-        <button onclick="submitPin()" class="text-blue-600 font-bold text-sm">Enter</button>
+        <div></div> <button onclick="pressKey('0')" class="keypad-btn">0</button>
+        <button onclick="clearPin()" class="flex items-center justify-center text-red-500 font-bold uppercase text-xs">Clear</button>
     </div>
 </div>
 
 <div id="main-app" class="hidden">
-    <div class="max-w-xl mx-auto p-4 md:p-8">
-        <header class="flex justify-between items-center mb-8">
-            <h1 class="text-2xl font-black tracking-tighter">The Beach House</h1>
-            <button onclick="location.reload()" class="bg-slate-200 px-4 py-1 rounded-full text-[10px] font-bold">LOGOUT</button>
+    <div class="max-w-xl mx-auto p-6 md:p-12">
+        <header class="flex justify-between items-center mb-10">
+            <h1 class="text-2xl font-black tracking-tighter">THE BEACH HOUSE</h1>
+            <button onclick="location.reload()" class="bg-slate-200 text-slate-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase">Exit Stay</button>
         </header>
 
-        <main class="space-y-4">
-            <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200">
-                <h2 class="text-3xl font-bold mb-1" id="portal-welcome"></h2>
-                <p id="stay-dates" class="text-slate-400 text-sm font-medium"></p>
-                <div id="calendar" class="grid grid-cols-7 gap-2 mt-6 pt-6 border-t border-slate-100"></div>
+        <main class="space-y-6">
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-200">
+                <h2 class="text-4xl font-black mb-1" id="guest-title"></h2>
+                <p id="stay-info" class="text-slate-400 font-bold text-sm uppercase tracking-wide"></p>
+                
+                <div id="calendar" class="grid grid-cols-7 gap-2 mt-8 pt-8 border-t border-slate-100"></div>
             </div>
 
             <section class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
-                <h3 class="font-bold mb-4">Chat with Host</h3>
-                <div id="message-list" class="max-h-60 overflow-y-auto space-y-3 flex flex-col mb-4 pr-2"></div>
+                <h3 class="font-bold mb-4 px-2">Concierge Chat</h3>
+                <div id="message-list" class="max-h-64 overflow-y-auto space-y-3 flex flex-col mb-4 pr-2"></div>
                 <div class="flex gap-2 bg-slate-100 p-2 rounded-2xl">
-                    <input type="text" id="guest-msg" class="bg-transparent px-4 py-2 flex-1 outline-none" placeholder="Type a message...">
-                    <button id="send-btn" class="bg-blue-600 text-white px-5 py-2 rounded-xl font-bold">Send</button>
+                    <input type="text" id="guest-msg" class="bg-transparent px-4 py-2 flex-1 outline-none font-medium" placeholder="Ask the host a question...">
+                    <button id="send-btn" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition">Send</button>
                 </div>
             </section>
         </main>
@@ -78,25 +78,8 @@ const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let currentGuest = null;
 let pinInput = "";
-
-function pressKey(num) {
-    if (pinInput.length < 6) {
-        pinInput += num;
-        updatePinDisplay();
-    }
-    if (pinInput.length === 6) {
-        setTimeout(submitPin, 200);
-    }
-}
-
-function clearPin() {
-    pinInput = "";
-    document.getElementById('instruction-text').innerText = "Enter your 6-digit access code";
-    document.getElementById('instruction-text').classList.remove('text-red-600');
-    updatePinDisplay();
-}
+let currentGuest = null;
 
 function updatePinDisplay() {
     for (let i = 0; i < 6; i++) {
@@ -105,8 +88,26 @@ function updatePinDisplay() {
     }
 }
 
-async function submitPin() {
-    // We search the 'families' table for ANY row where the access_code matches
+function pressKey(num) {
+    if (pinInput.length < 6) {
+        pinInput += num;
+        updatePinDisplay();
+    }
+    // Automatically submit when 6 digits are reached
+    if (pinInput.length === 6) {
+        setTimeout(validatePIN, 300);
+    }
+}
+
+function clearPin() {
+    pinInput = "";
+    const label = document.getElementById('instruction-text');
+    label.innerText = "Enter your 6-digit code";
+    label.style.color = "";
+    updatePinDisplay();
+}
+
+async function validatePIN() {
     const { data, error } = await supabaseClient
         .from('families')
         .select('*')
@@ -115,23 +116,25 @@ async function submitPin() {
 
     if (data) {
         currentGuest = data;
-        showPortal();
+        enterPortal();
     } else {
-        document.getElementById('instruction-text').innerText = "WRONG CODE - TRY AGAIN";
-        document.getElementById('instruction-text').classList.add('text-red-600');
+        const label = document.getElementById('instruction-text');
+        label.innerText = "WRONG CODE - TRY AGAIN";
+        label.style.color = "#ef4444";
         pinInput = "";
-        updatePinDisplay();
+        setTimeout(updatePinDisplay, 400);
     }
 }
 
-function showPortal() {
+function enterPortal() {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('main-app').classList.remove('hidden');
-    document.getElementById('portal-welcome').innerText = `Hello, ${currentGuest.last_name}s!`;
-    document.getElementById('stay-dates').innerText = `${currentGuest.check_in_date} to ${currentGuest.check_out_date}`;
+    document.getElementById('guest-title').innerText = `Hello, ${currentGuest.last_name}s!`;
+    document.getElementById('stay-info').innerText = `Stay: ${currentGuest.check_in_date} — ${currentGuest.check_out_date}`;
+    
     renderCalendar();
     loadMessages();
-    setInterval(loadMessages, 5000);
+    setInterval(loadMessages, 5000); // Check for new host messages
 }
 
 function renderCalendar() {
@@ -142,26 +145,41 @@ function renderCalendar() {
     
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         const day = document.createElement('div');
-        day.className = "aspect-square flex items-center justify-center rounded-xl border font-bold text-sm bg-white";
+        day.className = "aspect-square flex items-center justify-center rounded-xl border font-bold text-xs bg-white text-slate-400";
         day.innerText = d.getDate();
         cal.appendChild(day);
     }
 }
 
 async function loadMessages() {
-    const { data } = await supabaseClient.from('messages').select('*').eq('family_id', currentGuest.id).order('created_at', {ascending:true});
-    document.getElementById('message-list').innerHTML = data?.map(m => `
-        <div class="p-3 rounded-2xl text-sm ${m.sent_by==='guest'?'bg-blue-600 text-white self-end':'bg-slate-100 self-start'}">
+    if(!currentGuest) return;
+    const { data } = await supabaseClient
+        .from('messages')
+        .select('*')
+        .eq('family_id', currentGuest.id)
+        .order('created_at', {ascending:true});
+
+    const list = document.getElementById('message-list');
+    list.innerHTML = data?.map(m => `
+        <div class="p-4 rounded-2xl text-sm font-medium ${m.sent_by==='guest'?'bg-blue-600 text-white self-end ml-10 shadow-md':'bg-slate-100 text-slate-700 self-start mr-10'}">
             ${m.message}
         </div>
     `).join('') || '';
+    list.scrollTop = list.scrollHeight;
 }
 
 document.getElementById('send-btn').onclick = async () => {
-    const msg = document.getElementById('guest-msg').value;
+    const msgInput = document.getElementById('guest-msg');
+    const msg = msgInput.value.trim();
     if(!msg) return;
-    await supabaseClient.from('messages').insert({ family_id: currentGuest.id, message: msg, sent_by: 'guest' });
-    document.getElementById('guest-msg').value = '';
+    
+    await supabaseClient.from('messages').insert({ 
+        family_id: currentGuest.id, 
+        message: msg, 
+        sent_by: 'guest' 
+    });
+    
+    msgInput.value = '';
     loadMessages();
 };
 </script>
