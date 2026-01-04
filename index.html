@@ -61,16 +61,27 @@ function updateTime() {
 }
 setInterval(updateTime, 1000);
 
-// --- AUTO LOGIN ---
+// --- AUTO LOGIN WITH CONFIRMATION ---
 async function guestLogin() {
+    let lastName = localStorage.getItem('guest_last_name');
+
+    // Prompt guest if not stored
+    if(!lastName){
+        lastName = prompt("Enter your last name:");
+        if(!lastName) return guestLogin(); // require a name
+        const confirmName = confirm(`Welcome ${lastName}s! Is this correct?`);
+        if(!confirmName) return guestLogin();
+        localStorage.setItem('guest_last_name', lastName);
+    }
+
+    // Lookup in Supabase
     const today = new Date().toISOString().split('T')[0];
     const { data } = await supabaseClient.from('families')
         .select('*')
-        .gte('check_out_date', today) // active guests
-        .order('check_in_date', { ascending: true })
-        .limit(1)
+        .eq('last_name', lastName)
+        .gte('check_out_date', today)
         .maybeSingle();
-    
+
     if(!data){
         document.getElementById('welcome-text').innerText = "No guests currently staying";
         return;
@@ -78,7 +89,6 @@ async function guestLogin() {
 
     currentGuest = data;
 
-    // Enable message input now
     document.getElementById('guest-msg').disabled = false;
     document.getElementById('send-guest-msg').disabled = false;
 
@@ -90,12 +100,17 @@ function renderGuestInfo(){
     document.getElementById('welcome-text').innerText = `Welcome ${currentGuest.last_name}s!`;
 
     const today = new Date();
+    today.setHours(0,0,0,0); // fix for timezone
     const checkout = new Date(currentGuest.check_out_date);
+    checkout.setHours(0,0,0,0);
+
     const timeDiff = checkout - today;
     const daysLeft = Math.max(Math.ceil(timeDiff / (1000*60*60*24)), 0);
     document.getElementById('days-left').innerText = `Days left: ${daysLeft}`;
 
     const checkin = new Date(currentGuest.check_in_date);
+    checkin.setHours(0,0,0,0);
+
     const calendarDiv = document.getElementById('calendar');
     calendarDiv.innerHTML = '';
     for(let d = new Date(checkin); d <= checkout; d.setDate(d.getDate()+1)){
