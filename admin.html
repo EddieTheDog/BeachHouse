@@ -2,327 +2,78 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Admin v2.1</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+<title>Beach House Admin</title>
 <style>
-:root {
-    --primary: #0077cc;
-    --primary-dark: #005fa3;
-    --accent: #00d2ff;
-    --bg: #f0f4f8;
-    --text: #334e68;
-    --white: #ffffff;
-    --border: #d9e2ec;
-}
-
-body {
-    margin: 0;
-    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    display: flex;
-    min-height: 100vh;
-}
-
-nav {
-    width: 260px;
-    background: var(--primary);
-    color: white;
-    display: flex;
-    flex-direction: column;
-    padding: 20px 0;
-    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-}
-
-nav h1 {
-    font-size: 1.2rem;
-    padding: 0 20px 20px;
-    margin: 0;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-    letter-spacing: 1px;
-}
-
-.tab {
-    padding: 15px 20px;
-    cursor: pointer;
-    transition: 0.3s;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 500;
-}
-
-.tab:hover { background: var(--primary-dark); }
-.tab.active { background: var(--primary-dark); border-left: 5px solid var(--accent); }
-
-main {
-    flex-grow: 1;
-    padding: 30px;
-    max-width: 1200px;
-}
-
-.tab-content { display: none; }
-.tab-content.active { display: block; animation: fadeIn 0.4s ease; }
-
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-.card {
-    background: var(--white);
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    margin-bottom: 25px;
-}
-
-h2 { margin-top: 0; font-size: 1.5rem; color: var(--primary); }
-
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    align-items: end;
-}
-
-input, select {
-    padding: 10px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 14px;
-}
-
-button {
-    background: var(--primary);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: 0.2s;
-}
-
-button:hover { background: var(--primary-dark); }
-button.secondary { background: #627d98; }
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-    background: white;
-}
-
-th {
-    background: #f9fafb;
-    color: #486581;
-    text-align: left;
-    padding: 12px;
-    border-bottom: 2px solid var(--border);
-    font-size: 13px;
-    text-transform: uppercase;
-}
-
-td {
-    padding: 12px;
-    border-bottom: 1px solid var(--border);
-    font-size: 14px;
-}
-
-.badge {
-    padding: 4px 8px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: bold;
-}
-.badge-green { background: #dcfce7; color: #166534; }
-.badge-gray { background: #f1f5f9; color: #475569; }
-
-.btn-sm { padding: 5px 10px; font-size: 12px; }
+  body{ font-family:sans-serif; padding:20px;}
+  input, button{margin:5px;}
+  .family{border:1px solid #ccc; padding:5px; margin:5px;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+<h1>Admin Dashboard</h1>
 
-<nav>
-    <h1>BEACH HOUSE ADMIN</h1>
-    <div class="tab active" data-tab="guests">📅 Guests</div>
-    <div class="tab" data-tab="work">🛠️ Work Requests</div>
-    <div class="tab" data-tab="messages">💬 Messages</div>
-    <div class="tab" data-tab="controls">📱 Tablet Controls</div>
-</nav>
+<h2>Create / Edit Family</h2>
+<input type="text" id="last_name" placeholder="Last Name">
+<input type="date" id="check_in">
+<input type="date" id="check_out">
+<button id="create">Create / Update</button>
 
-<main>
-    <div id="guests" class="tab-content active">
-        <div class="card">
-            <h2>Schedule New Guest</h2>
-            <div class="form-grid">
-                <div>
-                    <label>Last Name</label>
-                    <input id="guest-lastname" type="text" placeholder="e.g. Smith">
-                </div>
-                <div>
-                    <label>Check-In</label>
-                    <input type="date" id="start-date">
-                </div>
-                <div>
-                    <label>Check-Out</label>
-                    <input type="date" id="end-date">
-                </div>
-                <button id="add-guest-btn">Add Reservation</button>
-            </div>
-        </div>
+<h2>Actions</h2>
+<button id="lock">Lock All Tablets</button>
+<button id="unlock">Unlock All Tablets</button>
+<input type="text" id="announcement_msg" placeholder="Announcement">
+<button id="send_announcement">Send Announcement</button>
 
-        <div class="card">
-            <h2>Current & Upcoming Guests</h2>
-            <table id="guest-table">
-                <thead>
-                    <tr>
-                        <th>Last Name</th>
-                        <th>Start Date</th>
-                        <th>End Date</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    </div>
-
-    <div id="work" class="tab-content">
-        <div class="card">
-            <h2>Maintenance Requests</h2>
-            <table id="work-table">
-                <thead>
-                    <tr><th>Guest</th><th>Request Details</th><th>Received</th></tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    </div>
-
-    <div id="messages" class="tab-content">
-        <div class="card">
-            <h2>Guest Messages</h2>
-            <table id="message-table">
-                <thead>
-                    <tr><th>Guest</th><th>Message</th><th>Received</th></tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    </div>
-
-    <div id="controls" class="tab-content">
-        <div class="card">
-            <h2>Remote Tablet Lock</h2>
-            <p>Restrict guest access to the tablet interface instantly.</p>
-            <div style="display: flex; gap: 10px;">
-                <button id="lock-btn" style="background:#dc2626;">Lock Tablet Now</button>
-                <button id="unlock-btn" class="secondary">Unlock Tablet</button>
-            </div>
-        </div>
-    </div>
-</main>
+<h2>Families</h2>
+<div id="family-list"></div>
 
 <script>
-window.onload = () => {
-    // Supabase client
-    const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // --- Tab Switching ---
-    const tabs = document.querySelectorAll('.tab');
-    const contents = document.querySelectorAll('.tab-content');
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            contents.forEach(c => c.classList.remove('active'));
-            tab.classList.add('active');
-            document.getElementById(tab.dataset.tab).classList.add('active');
+async function loadFamilies(){
+  const { data } = await supabase.from('families').select('*');
+  const list = document.getElementById('family-list');
+  list.innerHTML='';
+  data.forEach(f=>{
+    const div = document.createElement('div');
+    div.classList.add('family');
+    div.innerHTML=`<b>${f.last_name}s</b> | ${f.check_in_date} → ${f.check_out_date} 
+      <button onclick="checkout('${f.id}')">Check Out</button>`;
+    list.appendChild(div);
+  });
+}
 
-            if(tab.dataset.tab === 'guests') loadGuests();
-            if(tab.dataset.tab === 'work') loadWorkRequests();
-            if(tab.dataset.tab === 'messages') loadMessages();
-        });
-    });
+async function checkout(id){
+  await supabase.from('families').update({checked_in:false}).eq('id',id);
+  loadFamilies();
+}
 
-    // --- Load Guests ---
-    async function loadGuests() {
-        const { data, error } = await supabaseClient.from('guests').select('*').order('start_date', { ascending: true });
-        if(error) return console.error(error);
-        const tbody = document.querySelector('#guest-table tbody');
-        tbody.innerHTML = data.map(g => `
-            <tr>
-                <td><strong>${g.guest_last_name}</strong></td>
-                <td>${g.start_date}</td>
-                <td>${g.end_date}</td>
-                <td><span class="badge ${g.checked_in ? 'badge-green' : 'badge-gray'}">${g.checked_in ? 'In House' : 'Upcoming'}</span></td>
-                <td>
-                    <button class="btn-sm secondary" onclick="extendGuest(${g.id}, '${g.end_date}')">Extend</button>
-                    <button class="btn-sm" style="background:#beccda; color:#333" onclick="cancelGuest(${g.id})">Delete</button>
-                </td>
-            </tr>
-        `).join('');
-    }
+// Create or update family
+document.getElementById('create').onclick=async()=>{
+  const ln = document.getElementById('last_name').value;
+  const ci = document.getElementById('check_in').value;
+  const co = document.getElementById('check_out').value;
+  if(!ln||!ci||!co){ alert("Fill all fields"); return; }
+  const { data } = await supabase.from('families').upsert({last_name:ln, check_in_date:ci, check_out_date:co});
+  loadFamilies();
+}
 
-    // --- Work Requests ---
-    async function loadWorkRequests() {
-        const { data, error } = await supabaseClient.from('work_requests').select('*, guests(guest_last_name)').order('created_at', { ascending: false });
-        const tbody = document.querySelector('#work-table tbody');
-        if(!tbody || error) return;
-        tbody.innerHTML = data.map(w => `<tr><td>${w.guests?.guest_last_name || 'Guest'}</td><td>${w.request_text}</td><td>${new Date(w.created_at).toLocaleDateString()}</td></tr>`).join('');
-    }
+// Announcement
+document.getElementById('send_announcement').onclick=async()=>{
+  const msg = document.getElementById('announcement_msg').value;
+  if(!msg) return;
+  await supabase.from('announcements').insert({message:msg});
+  document.getElementById('announcement_msg').value='';
+}
 
-    // --- Messages ---
-    async function loadMessages() {
-        const { data, error } = await supabaseClient.from('messages').select('*, guests(guest_last_name)').order('created_at', { ascending: false });
-        const tbody = document.querySelector('#message-table tbody');
-        if(!tbody || error) return;
-        tbody.innerHTML = data.map(m => `<tr><td>${m.guests?.guest_last_name || 'Guest'}</td><td>${m.message_text}</td><td>${new Date(m.created_at).toLocaleDateString()}</td></tr>`).join('');
-    }
+// Lock/Unlock placeholders (to implement logic with real-time if needed)
+document.getElementById('lock').onclick=()=>alert("Tablets locked (placeholder)");
+document.getElementById('unlock').onclick=()=>alert("Tablets unlocked (placeholder)");
 
-    // --- Global Actions ---
-    window.cancelGuest = async (id) => {
-        if(!confirm("Delete reservation?")) return;
-        await supabaseClient.from('guests').delete().eq('id', id);
-        loadGuests();
-    };
-
-    window.extendGuest = async (id, currentEnd) => {
-        const days = prompt("Days to add:");
-        if(!days || isNaN(days)) return;
-        const date = new Date(currentEnd);
-        date.setDate(date.getDate() + parseInt(days));
-        await supabaseClient.from('guests').update({ end_date: date.toISOString().split('T')[0] }).eq('id', id);
-        loadGuests();
-    };
-
-    // --- Add Guest ---
-    document.getElementById('add-guest-btn').addEventListener('click', async () => {
-        const ln = document.getElementById('guest-lastname').value;
-        const sd = document.getElementById('start-date').value;
-        const ed = document.getElementById('end-date').value;
-        if(!ln || !sd || !ed) return alert("Fill all fields");
-        await supabaseClient.from('guests').insert([{ guest_last_name: ln, start_date: sd, end_date: ed, checked_in: false }]);
-        loadGuests();
-        ['guest-lastname', 'start-date', 'end-date'].forEach(id => document.getElementById(id).value = "");
-    });
-
-    // --- Tablet Controls ---
-    document.getElementById('lock-btn').addEventListener('click', async () => {
-        await supabaseClient.from('controls').update({ tablet_locked: true }).eq('id', 1);
-        alert("Tablet Locked");
-    });
-
-    document.getElementById('unlock-btn').addEventListener('click', async () => {
-        await supabaseClient.from('controls').update({ tablet_locked: false }).eq('id', 1);
-        alert("Tablet Unlocked");
-    });
-
-    // --- Initial Load ---
-    loadGuests();
-};
+loadFamilies();
 </script>
 </body>
 </html>
