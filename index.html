@@ -14,26 +14,25 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', async function() {
-  // Initialize Supabase
-  const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  // Check if any guests are currently staying
   try {
-    const { data, error } = await supabase.from('families').select('*');
-    const messageDiv = document.getElementById('message');
+    // Initialize Supabase first
+    const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // Check if there are any guests currently staying
+    const { data, error } = await supabase.from('families').select('*');
     if(error) throw error;
+
+    const messageDiv = document.getElementById('message');
 
     if(!data || data.length === 0){
       messageDiv.innerText = "No guests currently staying.";
       return;
     }
 
-    // Optional: we could later check for current date in check-in/out
-    // For now, just show a generic welcome message if families exist
-    messageDiv.innerText = "Guests are currently staying. (Dashboard coming soon)";
+    // Optional: You can later expand this to show a guest dashboard
+    messageDiv.innerText = "Guests are currently staying. Dashboard coming soon!";
   } catch(e) {
     document.getElementById('message').innerText = "Error loading guest data.";
     console.error(e);
