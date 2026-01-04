@@ -2,111 +2,113 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Beach House Guest</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  body { font-family: sans-serif; text-align:center; background:#f0f8ff; margin:0; padding:20px; }
-  #welcome { font-size: 2rem; margin: 20px; }
-  #calendar { display:flex; justify-content:center; margin:20px; gap:5px; }
-  .day { width:20px; height:20px; border-radius:50%; display:inline-block; }
+  .day { width:20px; height:20px; border-radius:50%; display:inline-block; margin:2px; }
   .past { background:#ccc; }
   .today { background:green; }
   .future { background:#00d4ff; }
-  #days-left { font-size:1.5rem; margin:20px; }
-  #message-box { margin-top:20px; }
-  #announcement { background:#fff; border:1px solid #ccc; padding:10px; margin-top:20px; }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body>
-<div id="welcome">Loading...</div>
-<div id="days-left"></div>
-<div id="calendar"></div>
-<div id="message-box">
-  <input type="text" id="guest-message" placeholder="Message host">
-  <button id="send-message">Send</button>
+<body class="bg-blue-50 font-sans">
+
+<div class="max-w-xl mx-auto p-8 text-center">
+    <h1 id="welcome" class="text-3xl font-bold mb-4">Loading...</h1>
+    <div id="days-left" class="text-xl font-semibold mb-4"></div>
+    <div id="calendar" class="flex justify-center flex-wrap mb-6"></div>
+
+    <div id="announcement" class="bg-white p-4 rounded-xl mb-6 shadow-sm"></div>
+
+    <div id="message-box" class="flex gap-2 justify-center">
+        <input type="text" id="guest-message" placeholder="Message host" class="p-2 rounded-lg border border-gray-300 w-2/3">
+        <button id="send-message" class="bg-blue-600 text-white p-2 rounded-lg font-bold">Send</button>
+    </div>
 </div>
-<div id="announcement"></div>
 
 <script>
 document.addEventListener('DOMContentLoaded', async function() {
-  const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // --- Supabase init ---
+    const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  const welcomeDiv = document.getElementById('welcome');
-  const daysLeftDiv = document.getElementById('days-left');
-  const calendarDiv = document.getElementById('calendar');
-  const announcementDiv = document.getElementById('announcement');
+    const welcomeDiv = document.getElementById('welcome');
+    const daysLeftDiv = document.getElementById('days-left');
+    const calendarDiv = document.getElementById('calendar');
+    const announcementDiv = document.getElementById('announcement');
 
-  try {
-    // For simplicity, auto-detect first family in DB (replace with your logic)
-    const { data: families, error } = await supabaseClient.from('families').select('*').limit(1);
-    if(error) throw error;
-
-    if(!families || families.length === 0){
-      welcomeDiv.innerText = "No guests currently staying.";
-      return;
+    // --- Check tablet lock ---
+    async function checkLockStatus() {
+        const { data } = await supabaseClient.from('tablet_lock').select('*').eq('id',1).maybeSingle();
+        if(data && data.is_locked) {
+            document.body.innerHTML = "<div class='text-center mt-40 text-2xl font-bold'>Tablet is currently locked. Please contact host.</div>";
+            return true;
+        }
+        return false;
     }
+    if(await checkLockStatus()) return;
+    setInterval(checkLockStatus, 5000);
 
+    // --- Load first family ---
+    const { data: families } = await supabaseClient.from('families').select('*').limit(1);
+    if(!families || families.length===0){
+        welcomeDiv.innerText = "No guests currently staying.";
+        return;
+    }
     const guest = families[0];
 
-    // Check localStorage to see if confirmed
+    // --- First-time confirmation ---
     const confirmedKey = `guest_confirmed_${guest.id}`;
     if(!localStorage.getItem(confirmedKey)){
-      let ok = confirm(`Welcome ${guest.last_name}s! Is this correct?`);
-      if(ok){
-        localStorage.setItem(confirmedKey, 'yes');
-      } else {
-        welcomeDiv.innerText = "Tablet locked. Please contact host.";
-        return;
-      }
+        let ok = confirm(`Welcome ${guest.last_name}s! Is this correct?`);
+        if(ok){
+            localStorage.setItem(confirmedKey,'yes');
+        } else {
+            document.body.innerHTML = "<div class='text-center mt-40 text-2xl font-bold'>Tablet locked. Please contact host.</div>";
+            return;
+        }
     }
 
-    // Show welcome
     welcomeDiv.innerText = `Welcome ${guest.last_name}s`;
 
-    // Calculate days left
+    // --- Days left and calendar ---
     const today = new Date();
-    const checkOut = new Date(guest.check_out_date);
     const checkIn = new Date(guest.check_in_date);
-
+    const checkOut = new Date(guest.check_out_date);
     const timeDiff = checkOut - today;
     const daysLeft = Math.ceil(timeDiff / (1000*60*60*24));
     daysLeftDiv.innerText = `Days left: ${daysLeft >=0 ? daysLeft : 0}`;
 
-    // Create dotted calendar
-    const totalDays = Math.ceil((checkOut - checkIn)/(1000*60*60*24)) + 1;
-    calendarDiv.innerHTML = '';
+    const totalDays = Math.ceil((checkOut-checkIn)/(1000*60*60*24)) +1;
+    calendarDiv.innerHTML='';
     for(let i=0;i<totalDays;i++){
-      const day = new Date(checkIn);
-      day.setDate(checkIn.getDate() + i);
-      const div = document.createElement('div');
-      div.classList.add('day');
-      if(day < today) div.classList.add('past');
-      else if(day.toDateString() === today.toDateString()) div.classList.add('today');
-      else div.classList.add('future');
-      calendarDiv.appendChild(div);
+        const day = new Date(checkIn);
+        day.setDate(checkIn.getDate() + i);
+        const div = document.createElement('div');
+        div.classList.add('day');
+        if(day < today) div.classList.add('past');
+        else if(day.toDateString() === today.toDateString()) div.classList.add('today');
+        else div.classList.add('future');
+        calendarDiv.appendChild(div);
     }
 
-    // Show latest announcement
-    const { data: announcements } = await supabaseClient.from('announcements').select('*').order('id', {ascending:false}).limit(1);
+    // --- Show latest announcement ---
+    const { data: announcements } = await supabaseClient.from('announcements').select('*').order('id',{ascending:false}).limit(1);
     if(announcements && announcements.length>0){
-      announcementDiv.innerText = `Announcement: ${announcements[0].message}`;
+        announcementDiv.innerText = announcements[0].message;
     }
 
-    // Send message to host
+    // --- Send message ---
     document.getElementById('send-message').onclick = async ()=>{
-      const msg = document.getElementById('guest-message').value.trim();
-      if(!msg) return;
-      await supabaseClient.from('messages').insert({guest_id: guest.id, message: msg});
-      document.getElementById('guest-message').value='';
-      alert("Message sent!");
+        const msg = document.getElementById('guest-message').value.trim();
+        if(!msg) return;
+        await supabaseClient.from('messages').insert({guest_id: guest.id, message: msg});
+        document.getElementById('guest-message').value='';
+        alert("Message sent!");
     }
-
-  } catch(e){
-    welcomeDiv.innerText = "Error loading guest data.";
-    console.error(e);
-  }
 
 });
 </script>
