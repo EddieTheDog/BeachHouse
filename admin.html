@@ -1,20 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Beach House Admin Pro</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .tab-btn.active { border-bottom: 2px solid #2563eb; color: #2563eb; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beach House Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.tab-btn.active { border-bottom: 2px solid #2563eb; color: #2563eb; }
+</style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
 
 <div class="max-w-5xl mx-auto p-4 md:p-8">
+    <!-- Header -->
     <header class="flex justify-between items-center mb-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div>
             <h1 class="text-2xl font-black tracking-tight text-gray-900">BEACH HOUSE <span class="text-blue-600">ADMIN</span></h1>
@@ -26,18 +27,14 @@
         </div>
     </header>
 
+    <!-- Tabs -->
     <nav class="flex space-x-1 mb-8 bg-gray-200/50 p-1 rounded-xl w-fit">
-        <button class="tab-btn px-6 py-2.5 rounded-lg font-bold text-sm transition-all active bg-white shadow-sm" onclick="openTab(event, 'tab-families')">
-            GUEST LIST
-        </button>
-        <button class="tab-btn px-6 py-2.5 rounded-lg font-bold text-sm transition-all text-gray-500 hover:text-gray-700" onclick="openTab(event, 'tab-announcements')">
-            ANNOUNCEMENTS
-        </button>
-        <button class="tab-btn px-6 py-2.5 rounded-lg font-bold text-sm transition-all text-gray-500 hover:text-gray-700" onclick="openTab(event, 'tab-hardware')">
-            HARDWARE
-        </button>
+        <button class="tab-btn px-6 py-2.5 rounded-lg font-bold text-sm transition-all active bg-white shadow-sm" onclick="openTab(event, 'tab-families')">GUEST LIST</button>
+        <button class="tab-btn px-6 py-2.5 rounded-lg font-bold text-sm transition-all text-gray-500 hover:text-gray-700" onclick="openTab(event, 'tab-announcements')">ANNOUNCEMENTS</button>
+        <button class="tab-btn px-6 py-2.5 rounded-lg font-bold text-sm transition-all text-gray-500 hover:text-gray-700" onclick="openTab(event, 'tab-hardware')">HARDWARE</button>
     </nav>
 
+    <!-- Guest List Tab -->
     <main id="tab-families" class="tab-content active space-y-6">
         <section class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
             <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
@@ -56,10 +53,12 @@
         <section>
             <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Active Reservations</h2>
             <div id="family-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                </div>
+                <!-- Families will load here -->
+            </div>
         </section>
     </main>
 
+    <!-- Announcements Tab -->
     <main id="tab-announcements" class="tab-content space-y-6">
         <div class="max-w-2xl mx-auto">
             <section class="bg-white p-8 rounded-3xl border-2 border-gray-100 shadow-xl">
@@ -94,6 +93,7 @@
         </div>
     </main>
 
+    <!-- Hardware Tab -->
     <main id="tab-hardware" class="tab-content">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="bg-slate-900 p-8 rounded-3xl text-white shadow-2xl">
@@ -127,7 +127,6 @@ function openTab(evt, tabName) {
         b.classList.remove('bg-white', 'shadow-sm', 'text-gray-900');
         b.classList.add('text-gray-500');
     });
-    
     document.getElementById(tabName).classList.add('active');
     evt.currentTarget.classList.add('bg-white', 'shadow-sm', 'text-gray-900');
     evt.currentTarget.classList.remove('text-gray-500');
@@ -139,7 +138,7 @@ function updateTime() {
 }
 setInterval(updateTime, 1000);
 
-// --- ANNOUNCEMENT LOGIC ---
+// --- ANNOUNCEMENTS ---
 function updateStatusUI() {
     const statusCard = document.getElementById('status-card');
     const statusText = document.getElementById('status-text');
@@ -169,7 +168,7 @@ function updateStatusUI() {
 }
 setInterval(updateStatusUI, 1000);
 
-// --- DATABASE OPERATIONS ---
+// --- LOAD FAMILIES ---
 document.addEventListener('DOMContentLoaded', async function() {
     const listDiv = document.getElementById('family-list');
 
@@ -186,7 +185,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             card.innerHTML = `
                 <div>
                     <h3 class="font-black text-gray-800 text-lg uppercase">${f.last_name}</h3>
-                    <p class="text-xs font-bold text-gray-400 tracking-wider">${f.check_in_date} &rarr; ${f.check_out_date}</p>
+                    <p class="text-xs font-bold text-gray-400 tracking-wider">${f.check_in_date} → ${f.check_out_date}</p>
                 </div>
                 <button onclick="checkout('${f.id}')" class="bg-red-50 text-red-500 px-4 py-2 rounded-xl text-xs font-black opacity-0 group-hover:opacity-100 transition">CHECK OUT</button>
             `;
@@ -230,10 +229,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const expiryDate = new Date();
         expiryDate.setMinutes(expiryDate.getMinutes() + mins);
 
-        // Delete previous (Ensure table is clean)
         await supabaseClient.from('announcements').delete().neq('message', 'CLEAR_ALL');
-
-        // Insert new
         const { error } = await supabaseClient.from('announcements').insert({
             message: msg,
             expires_at: expiryDate.toISOString()
@@ -255,8 +251,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     syncAnnouncement();
 });
 
-document.getElementById('lock').onclick = () => alert("Instruction: LOCK sent to tablets.");
-document.getElementById('unlock').onclick = () => alert("Instruction: UNLOCK sent to tablets.");
+// --- LOCK/UNLOCK TABLETS ---
+document.getElementById('lock').onclick = async () => {
+    await supabaseClient.from('tablet_lock').upsert({ id: 1, is_locked: true });
+    alert("All tablets locked!");
+};
+
+document.getElementById('unlock').onclick = async () => {
+    await supabaseClient.from('tablet_lock').upsert({ id: 1, is_locked: false });
+    alert("All tablets unlocked!");
+};
 </script>
 </body>
 </html>
