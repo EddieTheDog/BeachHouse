@@ -1,182 +1,229 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beach House Guest</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-  .calendar { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
-  .day { width: 32px; height: 32px; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer; }
-  .past { background-color:#e5e7eb; color:#9ca3af; }
-  .current { background-color:#22c55e; color:white; font-weight:bold; }
-  .future { background-color:#f3f4f6; color:#111827; }
-  .locked-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; color:white; font-size:2rem; z-index:50; display:none; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beach House Guest Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+        .day { aspect-ratio: 1; border-radius: 12px; display:flex; align-items:center; justify-content:center; font-size:0.875rem; transition: all 0.2s; }
+        .past { background-color:#f3f4f6; color:#9ca3af; text-decoration: line-through; }
+        .current { background-color:#2563eb; color:white; font-weight:bold; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3); }
+        .future { background-color:#eff6ff; color:#1e40af; border: 1px solid #dbeafe; }
+        
+        /* Chat Bubble Styles */
+        .msg-bubble { max-width: 80%; padding: 10px 14px; border-radius: 18px; margin-bottom: 4px; font-size: 0.95rem; }
+        .msg-you { background: #2563eb; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .msg-admin { background: #e5e7eb; color: #1f2937; align-self: flex-start; border-bottom-left-radius: 4px; }
+    </style>
 </head>
-<body class="bg-gray-50 font-sans relative">
+<body class="bg-slate-50 font-sans text-slate-900">
 
-<div class="locked-overlay" id="locked-overlay">🔒 Device Locked</div>
+    <div id="locked-overlay" class="fixed inset-0 bg-slate-900/95 z-50 flex-col items-center justify-center text-white hidden">
+        <span class="text-6xl mb-4">🔒</span>
+        <h2 class="text-2xl font-bold">Device Locked</h2>
+        <p class="text-slate-400">Please contact the host to unlock this tablet.</p>
+    </div>
 
-<div class="max-w-3xl mx-auto p-4 md:p-8">
-  <header class="flex justify-between items-center mb-8">
-    <h1 class="text-2xl font-bold text-gray-900">Beach House</h1>
-    <p id="current-time" class="text-lg font-mono font-bold text-gray-700"></p>
-  </header>
+    <div id="login-modal" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h2 class="text-xl font-bold mb-4">Guest Check-in</h2>
+            <input type="text" id="login-input" class="w-full border-2 border-slate-200 rounded-xl p-3 mb-4 outline-none focus:border-blue-500" placeholder="Enter Last Name">
+            <button id="login-submit" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">Access Portal</button>
+        </div>
+    </div>
 
-  <main class="bg-white p-6 rounded-2xl shadow-sm">
-    <h2 class="text-xl font-bold mb-2" id="welcome-text">Loading...</h2>
-    <p id="days-left" class="text-sm text-gray-500 mb-4"></p>
+    <div class="max-w-2xl mx-auto p-6">
+        <header class="flex justify-between items-end mb-8">
+            <div>
+                <h1 class="text-3xl font-black text-blue-900 tracking-tight">The Beach House</h1>
+                <p id="welcome-text" class="text-slate-500 font-medium pt-1 italic">Waiting for guest...</p>
+            </div>
+            <div class="text-right">
+                <p id="current-time" class="text-2xl font-mono font-bold text-slate-800 leading-none">00:00:00</p>
+                <p id="days-left" class="text-xs font-bold uppercase tracking-widest text-blue-600"></p>
+            </div>
+        </header>
 
-    <div id="calendar" class="calendar"></div>
+        <main class="space-y-6">
+            <section class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
+                <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Your Stay</h3>
+                <div id="calendar" class="calendar-grid"></div>
+            </section>
 
-    <section class="mt-6">
-      <h3 class="font-bold mb-2">Message Host</h3>
-      <div class="flex gap-2">
-        <input type="text" id="guest-msg" class="border-2 border-gray-200 rounded-xl p-3 flex-1" placeholder="Type a message..." disabled>
-        <button id="send-guest-msg" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-blue-700" disabled>Send</button>
-      </div>
-    </section>
+            <section class="bg-white rounded-3xl shadow-sm border border-slate-100 flex flex-col h-[500px]">
+                <div class="p-5 border-b border-slate-50">
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider">Messages with Host</h3>
+                </div>
+                
+                <div id="message-list" class="flex-1 overflow-y-auto p-5 flex flex-col gap-2">
+                    </div>
 
-    <section class="mt-6">
-      <h3 class="font-bold mb-2">Messages</h3>
-      <div id="message-list" class="max-h-64 overflow-y-auto space-y-2"></div>
-    </section>
-  </main>
-</div>
+                <div class="p-4 bg-slate-50 rounded-b-3xl">
+                    <div class="flex gap-2">
+                        <input type="text" id="guest-msg" class="flex-1 border-none rounded-2xl p-3 px-4 focus:ring-2 focus:ring-blue-500 shadow-inner" placeholder="Ask a question..." disabled>
+                        <button id="send-guest-msg" class="bg-blue-600 text-white p-3 px-6 rounded-2xl font-bold hover:scale-105 active:scale-95 transition disabled:opacity-50" disabled>
+                            Send
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
 
 <script>
+// --- CONFIGURATION ---
 const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentGuest = null;
-let guestLock = false;
 
 // --- CLOCK ---
 function updateTime() {
     const now = new Date();
-    document.getElementById('current-time').innerText = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    document.getElementById('current-time').innerText = now.toLocaleTimeString([], {hour12: false});
 }
 setInterval(updateTime, 1000);
 
-// --- SAFE AUTOMATIC LOGIN ---
-async function guestLogin() {
-    const todayISO = new Date().toISOString().split('T')[0];
-
-    // Check if guest is remembered
-    let lastName = localStorage.getItem('guest_last_name');
-
-    let guest;
-    if(lastName){
-        const { data } = await supabaseClient.from('families')
-            .select('*')
-            .eq('last_name', lastName)
-            .gte('check_out_date', todayISO)
-            .maybeSingle();
-        guest = data;
-    }
-
-    // If no stored guest or no match, ask for last name
-    if(!guest){
-        lastName = prompt("Enter your last name:");
-        if(!lastName) return guestLogin(); // require a name
-        const confirmName = confirm(`Welcome ${lastName}s! Is this correct?`);
-        if(!confirmName) return guestLogin();
-
-        const { data } = await supabaseClient.from('families')
-            .select('*')
-            .eq('last_name', lastName)
-            .gte('check_out_date', todayISO)
-            .maybeSingle();
-        if(!data){
-            document.getElementById('welcome-text').innerText = "No guests currently staying";
+// --- AUTH LOGIC ---
+async function initAuth() {
+    const savedName = localStorage.getItem('guest_last_name');
+    if (savedName) {
+        const guest = await fetchGuestData(savedName);
+        if (guest) {
+            setupApp(guest);
             return;
         }
-        guest = data;
-        localStorage.setItem('guest_last_name', lastName); // REMEMBER FOR FUTURE
     }
-
-    currentGuest = guest;
-
-    document.getElementById('guest-msg').disabled = false;
-    document.getElementById('send-guest-msg').disabled = false;
-
-    renderGuestInfo();
+    showLoginModal();
 }
 
-// --- RENDER GUEST INFO ---
-function renderGuestInfo(){
-    if(!currentGuest) return;
-    document.getElementById('welcome-text').innerText = `Welcome ${currentGuest.last_name}s!`;
+function showLoginModal() {
+    const modal = document.getElementById('login-modal');
+    modal.classList.remove('hidden');
+    document.getElementById('login-submit').onclick = async () => {
+        const name = document.getElementById('login-input').value.trim();
+        if (!name) return;
+        const guest = await fetchGuestData(name);
+        if (guest) {
+            localStorage.setItem('guest_last_name', name);
+            modal.classList.add('hidden');
+            setupApp(guest);
+        } else {
+            alert("Reservation not found for that name.");
+        }
+    };
+}
 
+async function fetchGuestData(lastName) {
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await supabase.from('families')
+        .select('*')
+        .eq('last_name', lastName)
+        .gte('check_out_date', today)
+        .maybeSingle();
+    return data;
+}
+
+function setupApp(guest) {
+    currentGuest = guest;
+    document.getElementById('welcome-text').innerText = `Welcome, the ${guest.last_name} family!`;
+    document.getElementById('guest-msg').disabled = false;
+    document.getElementById('send-guest-msg').disabled = false;
+    
+    renderCalendar();
+    loadMessages();
+    subscribeToUpdates();
+}
+
+// --- CALENDAR ---
+function renderCalendar() {
+    const calendarDiv = document.getElementById('calendar');
     const today = new Date();
     today.setHours(0,0,0,0);
-    const checkout = new Date(currentGuest.check_out_date);
-    checkout.setHours(0,0,0,0);
+    
+    const start = new Date(currentGuest.check_in_date);
+    const end = new Date(currentGuest.check_out_date);
+    
+    // Days Left Calculation
+    const diff = Math.ceil((end - today) / (1000 * 60 * 60 * 24));
+    document.getElementById('days-left').innerText = diff > 0 ? `${diff} Days Left` : "Checkout Day";
 
-    const timeDiff = checkout - today;
-    const daysLeft = Math.max(Math.ceil(timeDiff / (1000*60*60*24)), 0);
-    document.getElementById('days-left').innerText = `Days left: ${daysLeft}`;
-
-    const checkin = new Date(currentGuest.check_in_date);
-    checkin.setHours(0,0,0,0);
-
-    const calendarDiv = document.getElementById('calendar');
     calendarDiv.innerHTML = '';
-    for(let d = new Date(checkin); d <= checkout; d.setDate(d.getDate()+1)){
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         const dayDiv = document.createElement('div');
-        dayDiv.className = 'day';
-        const dateCopy = new Date(d);
-        if(dateCopy < today) dayDiv.classList.add('past');
-        else if(dateCopy.toDateString() === today.toDateString()) dayDiv.classList.add('current');
-        else dayDiv.classList.add('future');
+        const isToday = d.toDateString() === today.toDateString();
+        const isPast = d < today;
+        
+        dayDiv.className = `day ${isPast ? 'past' : (isToday ? 'current' : 'future')}`;
         dayDiv.innerText = d.getDate();
         calendarDiv.appendChild(dayDiv);
     }
 }
 
-// --- MESSAGES ---
-async function loadMessages(){
-    if(!currentGuest) return;
-    const { data: msgs } = await supabaseClient.from('messages').select('*').order('created_at',{ ascending:true });
+// --- MESSAGES & REALTIME ---
+async function loadMessages() {
+    const { data: msgs } = await supabase.from('messages').select('*').order('created_at', { ascending: true });
     const list = document.getElementById('message-list');
     list.innerHTML = '';
-    if(!msgs) return;
-    msgs.forEach(m=>{
-        let sender;
-        if(m.guest_id === currentGuest.id) sender = "You";
-        else sender = m.guest_id === null ? "Admin" : "Other Guest";
-        const div = document.createElement('div');
-        div.className = "p-2 bg-gray-100 rounded-xl";
-        div.innerHTML = `<strong>${sender}:</strong> ${m.message} <span class="text-xs text-gray-400 ml-2">(${new Date(m.created_at).toLocaleTimeString()})</span>`;
-        list.appendChild(div);
+    
+    msgs?.forEach(m => {
+        const isMe = m.guest_id === currentGuest.id;
+        const bubble = document.createElement('div');
+        bubble.className = `msg-bubble ${isMe ? 'msg-you' : 'msg-admin'}`;
+        bubble.innerHTML = `
+            <div class="text-xs ${isMe ? 'text-blue-200' : 'text-slate-500'} mb-1 font-bold">
+                ${isMe ? 'You' : 'Host'}
+            </div>
+            ${m.message}
+        `;
+        list.appendChild(bubble);
     });
     list.scrollTop = list.scrollHeight;
 }
-setInterval(loadMessages, 3000);
 
-// --- SEND MESSAGE ---
+function subscribeToUpdates() {
+    // Realtime Messages
+    supabase.channel('custom-all-channel')
+    .on('postgres_changes', { event: 'INSERT', table: 'messages' }, () => {
+        loadMessages();
+    })
+    // Realtime Lock status
+    .on('postgres_changes', { event: 'UPDATE', table: 'tablet_lock' }, (payload) => {
+        toggleLock(payload.new.is_locked);
+    })
+    .subscribe();
+}
+
+function toggleLock(isLocked) {
+    document.getElementById('locked-overlay').style.display = isLocked ? 'flex' : 'none';
+}
+
+// --- SENDING ---
 document.getElementById('send-guest-msg').onclick = async () => {
-    if(guestLock || !currentGuest) return alert("Device is locked or no active guest");
-    const msg = document.getElementById('guest-msg').value.trim();
-    if(!msg) return;
-    await supabaseClient.from('messages').insert({ guest_id: currentGuest.id, message: msg });
-    document.getElementById('guest-msg').value = '';
-    loadMessages();
+    const input = document.getElementById('guest-msg');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    input.value = '';
+    const { error } = await supabase.from('messages').insert({ 
+        guest_id: currentGuest.id, 
+        message: msg 
+    });
+    if (error) alert("Could not send message.");
 };
 
-// --- TABLET LOCK ---
-async function checkLock(){
-    const { data } = await supabaseClient.from('tablet_lock').select('*').eq('id',1).maybeSingle();
-    guestLock = data?.is_locked || false;
-    document.getElementById('locked-overlay').style.display = guestLock ? 'flex' : 'none';
+// Initial check for lock on load
+async function checkInitialLock() {
+    const { data } = await supabase.from('tablet_lock').select('is_locked').eq('id', 1).single();
+    if (data) toggleLock(data.is_locked);
 }
-setInterval(checkLock, 2000);
 
-// --- INIT ---
-guestLogin();
+checkInitialLock();
+initAuth();
 </script>
 
 </body>
