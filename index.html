@@ -7,110 +7,147 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  .day { width:20px; height:20px; border-radius:50%; display:inline-block; margin:2px; }
-  .past { background:#ccc; }
-  .today { background:green; }
-  .future { background:#00d4ff; }
+  .calendar { display: flex; gap: 4px; margin-top: 8px; }
+  .day { width: 32px; height: 32px; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer; }
+  .past { background-color:#e5e7eb; color:#9ca3af; }
+  .current { background-color:#22c55e; color:white; font-weight:bold; }
+  .future { background-color:#f3f4f6; color:#111827; }
+  .locked-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; color:white; font-size:2rem; z-index:50; display:none; }
 </style>
 </head>
-<body class="bg-blue-50 font-sans">
+<body class="bg-gray-50 font-sans relative">
 
-<div class="max-w-xl mx-auto p-8 text-center">
-    <h1 id="welcome" class="text-3xl font-bold mb-4">Loading...</h1>
-    <div id="days-left" class="text-xl font-semibold mb-4"></div>
-    <div id="calendar" class="flex justify-center flex-wrap mb-6"></div>
+<div class="locked-overlay" id="locked-overlay">🔒 Device Locked</div>
 
-    <div id="announcement" class="bg-white p-4 rounded-xl mb-6 shadow-sm"></div>
+<div class="max-w-3xl mx-auto p-4 md:p-8">
+  <header class="flex justify-between items-center mb-8">
+    <h1 class="text-2xl font-bold text-gray-900">Beach House</h1>
+    <p id="current-time" class="text-lg font-mono font-bold text-gray-700"></p>
+  </header>
 
-    <div id="message-box" class="flex gap-2 justify-center">
-        <input type="text" id="guest-message" placeholder="Message host" class="p-2 rounded-lg border border-gray-300 w-2/3">
-        <button id="send-message" class="bg-blue-600 text-white p-2 rounded-lg font-bold">Send</button>
-    </div>
+  <main class="bg-white p-6 rounded-2xl shadow-sm">
+    <h2 class="text-xl font-bold mb-2" id="welcome-text">Welcome Guest</h2>
+    <p id="days-left" class="text-sm text-gray-500 mb-4"></p>
+
+    <div id="calendar" class="calendar"></div>
+
+    <section class="mt-6">
+      <h3 class="font-bold mb-2">Message Host</h3>
+      <div class="flex gap-2">
+        <input type="text" id="guest-msg" class="border-2 border-gray-200 rounded-xl p-3 flex-1" placeholder="Type a message...">
+        <button id="send-guest-msg" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-blue-700">Send</button>
+      </div>
+    </section>
+
+    <section class="mt-6">
+      <h3 class="font-bold mb-2">Messages</h3>
+      <div id="message-list" class="max-h-64 overflow-y-auto space-y-2"></div>
+    </section>
+  </main>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', async function() {
-    // --- Supabase init ---
-    const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const welcomeDiv = document.getElementById('welcome');
-    const daysLeftDiv = document.getElementById('days-left');
-    const calendarDiv = document.getElementById('calendar');
-    const announcementDiv = document.getElementById('announcement');
+let currentGuest = null;
+let guestLock = false;
 
-    // --- Check tablet lock ---
-    async function checkLockStatus() {
-        const { data } = await supabaseClient.from('tablet_lock').select('*').eq('id',1).maybeSingle();
-        if(data && data.is_locked) {
-            document.body.innerHTML = "<div class='text-center mt-40 text-2xl font-bold'>Tablet is currently locked. Please contact host.</div>";
-            return true;
-        }
-        return false;
+// --- CLOCK ---
+function updateTime() {
+    const now = new Date();
+    document.getElementById('current-time').innerText = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+setInterval(updateTime, 1000);
+
+// --- FIRST TIME GUEST PROMPT ---
+async function guestLogin() {
+    let lastName = localStorage.getItem('guest_last_name');
+    if(!lastName){
+        lastName = prompt("Enter your last name:");
+        if(!lastName) { alert("Name required"); return guestLogin(); }
+        const confirmName = confirm(`Welcome ${lastName}s! Is this correct?`);
+        if(!confirmName) return guestLogin();
+        localStorage.setItem('guest_last_name', lastName);
     }
-    if(await checkLockStatus()) return;
-    setInterval(checkLockStatus, 5000);
 
-    // --- Load first family ---
-    const { data: families } = await supabaseClient.from('families').select('*').limit(1);
-    if(!families || families.length===0){
-        welcomeDiv.innerText = "No guests currently staying.";
+    // Lookup guest
+    const { data } = await supabaseClient.from('families').select('*').eq('last_name', lastName).maybeSingle();
+    if(!data){
+        document.getElementById('welcome-text').innerText = "No guests currently staying";
         return;
     }
-    const guest = families[0];
 
-    // --- First-time confirmation ---
-    const confirmedKey = `guest_confirmed_${guest.id}`;
-    if(!localStorage.getItem(confirmedKey)){
-        let ok = confirm(`Welcome ${guest.last_name}s! Is this correct?`);
-        if(ok){
-            localStorage.setItem(confirmedKey,'yes');
-        } else {
-            document.body.innerHTML = "<div class='text-center mt-40 text-2xl font-bold'>Tablet locked. Please contact host.</div>";
-            return;
-        }
-    }
+    currentGuest = data;
+    renderGuestInfo();
+}
 
-    welcomeDiv.innerText = `Welcome ${guest.last_name}s`;
+// --- RENDER GUEST INFO ---
+function renderGuestInfo(){
+    document.getElementById('welcome-text').innerText = `Welcome ${currentGuest.last_name}s!`;
 
-    // --- Days left and calendar ---
+    // Days left
     const today = new Date();
-    const checkIn = new Date(guest.check_in_date);
-    const checkOut = new Date(guest.check_out_date);
-    const timeDiff = checkOut - today;
-    const daysLeft = Math.ceil(timeDiff / (1000*60*60*24));
-    daysLeftDiv.innerText = `Days left: ${daysLeft >=0 ? daysLeft : 0}`;
+    const checkout = new Date(currentGuest.check_out_date);
+    const timeDiff = checkout - today;
+    const daysLeft = Math.max(Math.ceil(timeDiff / (1000*60*60*24)), 0);
+    document.getElementById('days-left').innerText = `Days left: ${daysLeft}`;
 
-    const totalDays = Math.ceil((checkOut-checkIn)/(1000*60*60*24)) +1;
-    calendarDiv.innerHTML='';
-    for(let i=0;i<totalDays;i++){
-        const day = new Date(checkIn);
-        day.setDate(checkIn.getDate() + i);
+    // Calendar
+    const checkin = new Date(currentGuest.check_in_date);
+    const calendarDiv = document.getElementById('calendar');
+    calendarDiv.innerHTML = '';
+    for(let d = new Date(checkin); d <= checkout; d.setDate(d.getDate()+1)){
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'day';
+        const dateCopy = new Date(d);
+        if(dateCopy < today) dayDiv.classList.add('past');
+        else if(dateCopy.toDateString() === today.toDateString()) dayDiv.classList.add('current');
+        else dayDiv.classList.add('future');
+        dayDiv.innerText = d.getDate();
+        calendarDiv.appendChild(dayDiv);
+    }
+}
+
+// --- MESSAGES ---
+async function loadMessages(){
+    const { data: msgs } = await supabaseClient.from('messages').select('*, families(last_name)').order('created_at',{ ascending:true });
+    const list = document.getElementById('message-list');
+    list.innerHTML = '';
+    if(!msgs) return;
+    msgs.forEach(m=>{
         const div = document.createElement('div');
-        div.classList.add('day');
-        if(day < today) div.classList.add('past');
-        else if(day.toDateString() === today.toDateString()) div.classList.add('today');
-        else div.classList.add('future');
-        calendarDiv.appendChild(div);
-    }
+        let sender = m.guest_id === currentGuest?.id ? "You" : m.guest_id === null ? "Admin" : m.families?.last_name;
+        div.className = "p-2 bg-gray-100 rounded-xl";
+        div.innerHTML = `<strong>${sender}:</strong> ${m.message} <span class="text-xs text-gray-400 ml-2">(${new Date(m.created_at).toLocaleTimeString()})</span>`;
+        list.appendChild(div);
+    });
+    list.scrollTop = list.scrollHeight;
+}
+setInterval(loadMessages, 3000);
 
-    // --- Show latest announcement ---
-    const { data: announcements } = await supabaseClient.from('announcements').select('*').order('id',{ascending:false}).limit(1);
-    if(announcements && announcements.length>0){
-        announcementDiv.innerText = announcements[0].message;
-    }
+// --- SEND MESSAGE ---
+document.getElementById('send-guest-msg').onclick = async () => {
+    if(guestLock) return alert("Device is locked");
+    const msg = document.getElementById('guest-msg').value.trim();
+    if(!msg) return;
+    await supabaseClient.from('messages').insert({ guest_id: currentGuest?.id, message: msg });
+    document.getElementById('guest-msg').value = '';
+    loadMessages();
+};
 
-    // --- Send message ---
-    document.getElementById('send-message').onclick = async ()=>{
-        const msg = document.getElementById('guest-message').value.trim();
-        if(!msg) return;
-        await supabaseClient.from('messages').insert({guest_id: guest.id, message: msg});
-        document.getElementById('guest-message').value='';
-        alert("Message sent!");
-    }
+// --- TABLET LOCK ---
+async function checkLock(){
+    const { data } = await supabaseClient.from('tablet_lock').select('*').eq('id',1).maybeSingle();
+    guestLock = data?.is_locked || false;
+    document.getElementById('locked-overlay').style.display = guestLock ? 'flex' : 'none';
+}
+setInterval(checkLock, 2000);
 
-});
+// --- INIT ---
+guestLogin();
 </script>
+
 </body>
 </html>
