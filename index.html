@@ -18,10 +18,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Initialize Supabase first
     const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Check if there are any guests currently staying
-    const { data, error } = await supabase.from('families').select('*');
+    // Check if any guests exist
+    const { data, error } = await supabaseClient.from('families').select('*');
     if(error) throw error;
 
     const messageDiv = document.getElementById('message');
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       return;
     }
 
-    // Optional: You can later expand this to show a guest dashboard
+    // Future: expand dashboard here
     messageDiv.innerText = "Guests are currently staying. Dashboard coming soon!";
   } catch(e) {
     document.getElementById('message').innerText = "Error loading guest data.";
