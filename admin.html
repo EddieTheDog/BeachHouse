@@ -29,14 +29,18 @@
 <div id="family-list"></div>
 
 <script>
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 async function loadFamilies(){
   const { data } = await supabase.from('families').select('*');
   const list = document.getElementById('family-list');
   list.innerHTML='';
+  if(data.length===0){
+    list.innerHTML="<p>No families currently created.</p>";
+    return;
+  }
   data.forEach(f=>{
     const div = document.createElement('div');
     div.classList.add('family');
@@ -57,7 +61,7 @@ document.getElementById('create').onclick=async()=>{
   const ci = document.getElementById('check_in').value;
   const co = document.getElementById('check_out').value;
   if(!ln||!ci||!co){ alert("Fill all fields"); return; }
-  const { data } = await supabase.from('families').upsert({last_name:ln, check_in_date:ci, check_out_date:co});
+  await supabase.from('families').upsert({last_name:ln, check_in_date:ci, check_out_date:co});
   loadFamilies();
 }
 
@@ -69,7 +73,7 @@ document.getElementById('send_announcement').onclick=async()=>{
   document.getElementById('announcement_msg').value='';
 }
 
-// Lock/Unlock placeholders (to implement logic with real-time if needed)
+// Lock/Unlock placeholders
 document.getElementById('lock').onclick=()=>alert("Tablets locked (placeholder)");
 document.getElementById('unlock').onclick=()=>alert("Tablets unlocked (placeholder)");
 
