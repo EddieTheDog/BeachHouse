@@ -4,39 +4,110 @@
 <meta charset="UTF-8">
 <title>Beach House Guest</title>
 <style>
-  body { font-family: sans-serif; text-align:center; background:#f0f8ff; margin:0; padding:0; }
-  #message { font-size: 2rem; margin: 50px; }
+  body { font-family: sans-serif; text-align:center; background:#f0f8ff; margin:0; padding:20px; }
+  #welcome { font-size: 2rem; margin: 20px; }
+  #calendar { display:flex; justify-content:center; margin:20px; gap:5px; }
+  .day { width:20px; height:20px; border-radius:50%; display:inline-block; }
+  .past { background:#ccc; }
+  .today { background:green; }
+  .future { background:#00d4ff; }
+  #days-left { font-size:1.5rem; margin:20px; }
+  #message-box { margin-top:20px; }
+  #announcement { background:#fff; border:1px solid #ccc; padding:10px; margin-top:20px; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<div id="message">Loading...</div>
+<div id="welcome">Loading...</div>
+<div id="days-left"></div>
+<div id="calendar"></div>
+<div id="message-box">
+  <input type="text" id="guest-message" placeholder="Message host">
+  <button id="send-message">Send</button>
+</div>
+<div id="announcement"></div>
 
 <script>
 document.addEventListener('DOMContentLoaded', async function() {
-  try {
-    // Initialize Supabase first
-    const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Check if any guests exist
-    const { data, error } = await supabaseClient.from('families').select('*');
+  const welcomeDiv = document.getElementById('welcome');
+  const daysLeftDiv = document.getElementById('days-left');
+  const calendarDiv = document.getElementById('calendar');
+  const announcementDiv = document.getElementById('announcement');
+
+  try {
+    // For simplicity, auto-detect first family in DB (replace with your logic)
+    const { data: families, error } = await supabaseClient.from('families').select('*').limit(1);
     if(error) throw error;
 
-    const messageDiv = document.getElementById('message');
-
-    if(!data || data.length === 0){
-      messageDiv.innerText = "No guests currently staying.";
+    if(!families || families.length === 0){
+      welcomeDiv.innerText = "No guests currently staying.";
       return;
     }
 
-    // Future: expand dashboard here
-    messageDiv.innerText = "Guests are currently staying. Dashboard coming soon!";
-  } catch(e) {
-    document.getElementById('message').innerText = "Error loading guest data.";
+    const guest = families[0];
+
+    // Check localStorage to see if confirmed
+    const confirmedKey = `guest_confirmed_${guest.id}`;
+    if(!localStorage.getItem(confirmedKey)){
+      let ok = confirm(`Welcome ${guest.last_name}s! Is this correct?`);
+      if(ok){
+        localStorage.setItem(confirmedKey, 'yes');
+      } else {
+        welcomeDiv.innerText = "Tablet locked. Please contact host.";
+        return;
+      }
+    }
+
+    // Show welcome
+    welcomeDiv.innerText = `Welcome ${guest.last_name}s`;
+
+    // Calculate days left
+    const today = new Date();
+    const checkOut = new Date(guest.check_out_date);
+    const checkIn = new Date(guest.check_in_date);
+
+    const timeDiff = checkOut - today;
+    const daysLeft = Math.ceil(timeDiff / (1000*60*60*24));
+    daysLeftDiv.innerText = `Days left: ${daysLeft >=0 ? daysLeft : 0}`;
+
+    // Create dotted calendar
+    const totalDays = Math.ceil((checkOut - checkIn)/(1000*60*60*24)) + 1;
+    calendarDiv.innerHTML = '';
+    for(let i=0;i<totalDays;i++){
+      const day = new Date(checkIn);
+      day.setDate(checkIn.getDate() + i);
+      const div = document.createElement('div');
+      div.classList.add('day');
+      if(day < today) div.classList.add('past');
+      else if(day.toDateString() === today.toDateString()) div.classList.add('today');
+      else div.classList.add('future');
+      calendarDiv.appendChild(div);
+    }
+
+    // Show latest announcement
+    const { data: announcements } = await supabaseClient.from('announcements').select('*').order('id', {ascending:false}).limit(1);
+    if(announcements && announcements.length>0){
+      announcementDiv.innerText = `Announcement: ${announcements[0].message}`;
+    }
+
+    // Send message to host
+    document.getElementById('send-message').onclick = async ()=>{
+      const msg = document.getElementById('guest-message').value.trim();
+      if(!msg) return;
+      await supabaseClient.from('messages').insert({guest_id: guest.id, message: msg});
+      document.getElementById('guest-message').value='';
+      alert("Message sent!");
+    }
+
+  } catch(e){
+    welcomeDiv.innerText = "Error loading guest data.";
     console.error(e);
   }
+
 });
 </script>
 </body>
