@@ -61,19 +61,16 @@ function updateTime() {
 }
 setInterval(updateTime, 1000);
 
-// --- FIRST TIME GUEST PROMPT ---
+// --- AUTO LOGIN: pick first active guest ---
 async function guestLogin() {
-    let lastName = localStorage.getItem('guest_last_name');
-    if(!lastName){
-        lastName = prompt("Enter your last name:");
-        if(!lastName) { alert("Name required"); return guestLogin(); }
-        const confirmName = confirm(`Welcome ${lastName}s! Is this correct?`);
-        if(!confirmName) return guestLogin();
-        localStorage.setItem('guest_last_name', lastName);
-    }
-
-    // Lookup guest
-    const { data } = await supabaseClient.from('families').select('*').eq('last_name', lastName).maybeSingle();
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await supabaseClient.from('families')
+        .select('*')
+        .gte('check_in_date', today) // in case of future stays
+        .order('check_in_date', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+    
     if(!data){
         document.getElementById('welcome-text').innerText = "No guests currently staying";
         return;
@@ -117,8 +114,8 @@ async function loadMessages(){
     list.innerHTML = '';
     if(!msgs) return;
     msgs.forEach(m=>{
-        const div = document.createElement('div');
         let sender = m.guest_id === currentGuest?.id ? "You" : m.guest_id === null ? "Admin" : m.families?.last_name;
+        const div = document.createElement('div');
         div.className = "p-2 bg-gray-100 rounded-xl";
         div.innerHTML = `<strong>${sender}:</strong> ${m.message} <span class="text-xs text-gray-400 ml-2">(${new Date(m.created_at).toLocaleTimeString()})</span>`;
         list.appendChild(div);
