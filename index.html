@@ -8,54 +8,54 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   #message-list::-webkit-scrollbar { width: 4px; }
-  #message-list::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-  .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 12px; }
-  .day { aspect-ratio: 1/1; border-radius: 12px; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight: 500; }
+  #message-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+  .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 12px; }
+  .day { aspect-ratio: 1/1; border-radius: 10px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight: 600; }
   .past { background-color:#f1f5f9; color:#94a3b8; text-decoration: line-through; }
-  .current { background-color:#2563eb; color:white; font-weight:bold; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
-  .future { background-color:#ffffff; color:#1e293b; border: 1px solid #e2e8f0; }
-  .locked-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.95); display:none; flex-direction: column; align-items:center; justify-content:center; color:white; z-index:100; backdrop-filter: blur(8px); }
+  .current { background-color:#2563eb; color:white; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3); }
+  .future { background-color:#ffffff; color:#334155; border: 1px solid #e2e8f0; }
+  .locked-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.9); display:none; flex-direction: column; align-items:center; justify-content:center; color:white; z-index:100; backdrop-filter: blur(10px); }
 </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 min-h-screen">
 
 <div class="locked-overlay" id="locked-overlay">
-    <span class="text-6xl mb-4">🔒</span>
-    <h2 class="text-2xl font-bold tracking-tight">Device Locked</h2>
+    <div class="text-center">
+        <span class="text-6xl block mb-4">🔒</span>
+        <h2 class="text-2xl font-bold uppercase tracking-widest">Device Locked</h2>
+        <p class="text-slate-400 mt-2">Access restricted by host</p>
+    </div>
 </div>
 
-<div class="max-w-2xl mx-auto p-6 md:p-12">
-  <header class="flex justify-between items-center mb-10">
+<div class="max-w-xl mx-auto p-4 md:p-8">
+  <header class="flex justify-between items-end mb-8">
     <div>
-        <h1 class="text-3xl font-black text-slate-800 tracking-tight">Beach House</h1>
-        <p class="text-blue-600 font-semibold text-sm uppercase tracking-widest">Guest Portal</p>
+        <h1 class="text-3xl font-black text-slate-900 leading-none">The Beach House</h1>
+        <p class="text-blue-600 font-bold text-xs uppercase tracking-widest mt-2">Guest Services</p>
     </div>
-    <div class="text-right">
-        <p id="current-time" class="text-2xl font-mono font-bold text-slate-700 bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-100"></p>
-    </div>
+    <p id="current-time" class="text-xl font-mono font-bold text-slate-600"></p>
   </header>
 
-  <main class="space-y-6">
-    <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
-        <h2 class="text-2xl font-bold text-slate-800" id="welcome-text">Loading...</h2>
-        <p id="days-left" class="text-slate-500 font-medium mt-1 mb-6"></p>
+  <main class="space-y-4">
+    <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
+        <h2 class="text-2xl font-bold text-slate-800" id="welcome-text">Checking in...</h2>
+        <p id="days-left" class="text-slate-500 font-medium mb-4 text-sm"></p>
         
-        <div class="border-t border-slate-50 pt-6">
-            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Your Schedule</h3>
+        <div class="pt-4 border-t border-slate-100">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-2">Stay Calendar</p>
             <div id="calendar" class="calendar"></div>
         </div>
     </div>
 
-    <section class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
-      <h3 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
-          <span>Message Host</span>
-      </h3>
+    <section class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
+      <h3 class="font-bold text-slate-800 mb-4 px-1">Messages</h3>
       
-      <div id="message-list" class="max-h-64 overflow-y-auto space-y-3 mb-6 pr-2"></div>
+      <div id="message-list" class="max-h-80 overflow-y-auto space-y-3 mb-4 pr-1">
+          </div>
 
-      <div class="flex gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-100">
-        <input type="text" id="guest-msg" class="bg-transparent rounded-xl p-3 flex-1 outline-none text-slate-700" placeholder="Type a message..." disabled>
-        <button id="send-guest-msg" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors disabled:opacity-50" disabled>
+      <div class="flex gap-2 bg-slate-100 p-2 rounded-2xl">
+        <input type="text" id="guest-msg" class="bg-transparent px-4 py-2 flex-1 outline-none text-slate-700 placeholder-slate-400" placeholder="Need anything? Ask here..." disabled>
+        <button id="send-guest-msg" class="bg-blue-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50" disabled>
             Send
         </button>
       </div>
@@ -68,16 +68,15 @@ const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let currentGuest = null; // This will hold the entire family record including the ID
+let currentGuest = null;
 let guestLock = false;
 
 function updateTime() {
     const now = new Date();
-    document.getElementById('current-time').innerText = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    document.getElementById('current-time').innerText = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 }
 setInterval(updateTime, 1000);
 
-// --- UPDATED LOGIN LOGIC ---
 async function guestLogin() {
     const todayISO = new Date().toISOString().split('T')[0];
     let lastName = localStorage.getItem('guest_last_name');
@@ -93,7 +92,7 @@ async function guestLogin() {
     }
 
     if(!guest){
-        lastName = prompt("Enter your last name:");
+        lastName = prompt("Enter your last name to access the portal:");
         if(!lastName) return guestLogin();
         
         const { data } = await supabaseClient.from('families')
@@ -110,18 +109,17 @@ async function guestLogin() {
         localStorage.setItem('guest_last_name', lastName);
     }
 
-    // CRITICAL: We store the whole guest object so we have currentGuest.id
-    currentGuest = guest; 
-    
+    currentGuest = guest;
     document.getElementById('guest-msg').disabled = false;
     document.getElementById('send-guest-msg').disabled = false;
+    
     renderGuestInfo();
-    loadMessages(); // Load messages immediately after login
+    loadMessages();
 }
 
 function renderGuestInfo(){
     if(!currentGuest) return;
-    document.getElementById('welcome-text').innerText = `Welcome ${currentGuest.last_name}s!`;
+    document.getElementById('welcome-text').innerText = `Hello, ${currentGuest.last_name}s!`;
 
     const today = new Date();
     today.setHours(0,0,0,0);
@@ -130,7 +128,7 @@ function renderGuestInfo(){
 
     const timeDiff = checkout - today;
     const daysLeft = Math.max(Math.ceil(timeDiff / (1000*60*60*24)), 0);
-    document.getElementById('days-left').innerText = `✨ ${daysLeft} days remaining`;
+    document.getElementById('days-left').innerText = `You have ${daysLeft} days left in your paradise stay.`;
 
     const calendarDiv = document.getElementById('calendar');
     calendarDiv.innerHTML = '';
@@ -146,11 +144,12 @@ function renderGuestInfo(){
     }
 }
 
-// --- UPDATED MESSAGE LOADING ---
+// --- UPDATED TO MATCH YOUR messages TABLE ---
 async function loadMessages(){
     if(!currentGuest) return;
     const { data: msgs } = await supabaseClient.from('messages')
         .select('*')
+        .eq('family_id', currentGuest.id) // Filter to only see this guest's thread
         .order('created_at',{ ascending:true });
 
     const list = document.getElementById('message-list');
@@ -158,15 +157,12 @@ async function loadMessages(){
     if(!msgs) return;
 
     msgs.forEach(m => {
-        // If the message's guest_id matches our logged-in family ID
-        const isMe = m.guest_id === currentGuest.id;
-        let senderLabel = isMe ? "You" : (m.guest_id === null ? "Host" : "Other");
-
+        const isMe = m.sent_by === 'guest';
         const div = document.createElement('div');
-        div.className = `p-3 rounded-2xl text-sm ${isMe ? 'bg-blue-600 text-white ml-12' : 'bg-slate-100 text-slate-800 mr-12'}`;
+        div.className = `p-3 rounded-2xl text-sm shadow-sm ${isMe ? 'bg-blue-600 text-white ml-8' : 'bg-white border border-slate-200 text-slate-800 mr-8'}`;
         div.innerHTML = `
-            <div class="font-bold text-[10px] uppercase opacity-70 mb-1">${senderLabel}</div>
-            <div>${m.message}</div>
+            <div class="font-black text-[9px] uppercase tracking-widest opacity-60 mb-1">${isMe ? 'Your Message' : 'Host Response'}</div>
+            <div class="font-medium">${m.message}</div>
         `;
         list.appendChild(div);
     });
@@ -174,26 +170,22 @@ async function loadMessages(){
 }
 setInterval(loadMessages, 3000);
 
-// --- UPDATED SENDING LOGIC ---
+// --- UPDATED INSERT TO MATCH YOUR messages TABLE ---
 document.getElementById('send-guest-msg').onclick = async () => {
     if(guestLock || !currentGuest) return;
-    
     const msgInput = document.getElementById('guest-msg');
     const msgText = msgInput.value.trim();
-    
     if(!msgText) return;
 
-    // We explicitly pass currentGuest.id into the guest_id column
     const { error } = await supabaseClient.from('messages').insert({ 
-        guest_id: currentGuest.id, 
-        message: msgText 
+        family_id: currentGuest.id, // Links to public.families.id
+        message: msgText,
+        sent_by: 'guest'            // Records that the guest sent it
     });
 
     if(!error) {
         msgInput.value = '';
         loadMessages();
-    } else {
-        console.error("Error sending message:", error);
     }
 };
 
