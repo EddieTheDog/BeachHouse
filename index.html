@@ -5,121 +5,39 @@
 <title>Beach House Guest</title>
 <style>
   body { font-family: sans-serif; text-align:center; background:#f0f8ff; margin:0; padding:0; }
-  #time { font-size: 2rem; margin: 10px; }
-  #welcome { font-size: 1.5rem; margin: 20px; }
-  #calendar { margin: 20px; }
-  .dot { display:inline-block; width:15px; height:15px; border-radius:50%; margin:2px; }
-  .past { background:#ccc; }
-  .current { background:green; }
-  .upcoming { background:#eee; }
-  #days-left { font-size:1.2rem; margin:10px; }
-  #messages { margin:20px; }
-  #announcement { background:yellow; padding:10px; margin:10px; display:none; }
+  #message { font-size: 2rem; margin: 50px; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<div id="time"></div>
-<div id="welcome"></div>
-<div id="calendar"></div>
-<div id="days-left"></div>
-<div id="announcement"></div>
-<div id="messages">
-  <div id="chat"></div>
-  <input type="text" id="msg-input" placeholder="Type message...">
-  <button id="send-msg">Send</button>
-</div>
+<div id="message">Loading...</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', async function() {
+  // Initialize Supabase
   const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
   const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  let family = null;
 
-  // Display local Southern California time
-  function updateTime(){
-    const now = new Date();
-    document.getElementById('time').innerText = now.toLocaleTimeString('en-US', {timeZone:'America/Los_Angeles'});
-  }
-  setInterval(updateTime,1000);
-  updateTime();
+  // Check if any guests are currently staying
+  try {
+    const { data, error } = await supabase.from('families').select('*');
+    const messageDiv = document.getElementById('message');
 
-  // Prompt last name on first visit
-  async function verifyFamily(){
-    const lastName = prompt("Enter your last name:");
-    const { data } = await supabase
-        .from('families')
-        .select('*')
-        .eq('last_name', lastName)
-        .maybeSingle();
+    if(error) throw error;
 
-    if(!data){ 
-      document.getElementById('welcome').innerText = "No guests currently staying.";
+    if(!data || data.length === 0){
+      messageDiv.innerText = "No guests currently staying.";
       return;
     }
 
-    family = data;
-    
-    const isCorrect = confirm(`Welcome, ${family.last_name}s!\nIs this correct?`);
-    if(!isCorrect){
-      document.body.innerHTML = "<h1>Tablet locked. Please ask host.</h1>";
-      return;
-    }
-
-    loadDashboard();
+    // Optional: we could later check for current date in check-in/out
+    // For now, just show a generic welcome message if families exist
+    messageDiv.innerText = "Guests are currently staying. (Dashboard coming soon)";
+  } catch(e) {
+    document.getElementById('message').innerText = "Error loading guest data.";
+    console.error(e);
   }
-
-  // Load guest dashboard
-  async function loadDashboard(){
-    document.getElementById('welcome').innerText = `Welcome, ${family.last_name}s!`;
-
-    // Calendar
-    const calendarDiv = document.getElementById('calendar');
-    calendarDiv.innerHTML = '';
-    const start = new Date(family.check_in_date);
-    const end = new Date(family.check_out_date);
-    const today = new Date();
-    let cur = new Date(start);
-    while(cur <= end){
-      const dot = document.createElement('div');
-      dot.classList.add('dot');
-      if(cur < new Date(today.setHours(0,0,0,0))) dot.classList.add('past');
-      else if(cur.toDateString() === new Date().toDateString()) dot.classList.add('current');
-      else dot.classList.add('upcoming');
-      calendarDiv.appendChild(dot);
-      cur.setDate(cur.getDate()+1);
-    }
-
-    // Days left
-    const daysLeft = Math.ceil((new Date(family.check_out_date)-new Date())/(1000*60*60*24));
-    document.getElementById('days-left').innerText = `You have ${daysLeft} days left at the beach house.`;
-
-    // Listen to announcements
-    supabase.from('announcements').on('INSERT', payload=>{
-      const ann = document.getElementById('announcement');
-      ann.innerText = payload.new.message;
-      ann.style.display='block';
-    }).subscribe();
-
-    // Load and listen to messages
-    const chatDiv = document.getElementById('chat');
-    const { data:msgs } = await supabase.from('messages').select('*').eq('family_id', family.id);
-    msgs.forEach(m=>chatDiv.innerHTML+=`<div><b>${m.sent_by}:</b> ${m.message}</div>`);
-
-    supabase.from(`messages:family_id=eq.${family.id}`).on('INSERT', payload=>{
-      chatDiv.innerHTML+=`<div><b>${payload.new.sent_by}:</b> ${payload.new.message}</div>`;
-    }).subscribe();
-
-    document.getElementById('send-msg').onclick=async()=>{
-      const msg = document.getElementById('msg-input').value;
-      if(!msg) return;
-      await supabase.from('messages').insert({family_id: family.id, message: msg, sent_by:'guest'});
-      document.getElementById('msg-input').value='';
-    }
-  }
-
-  verifyFamily();
 });
 </script>
 </body>
