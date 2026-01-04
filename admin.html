@@ -10,63 +10,67 @@
 </style>
 </head>
 <body class="bg-slate-100 p-4 md:p-10 font-sans">
-    <div class="max-w-5xl mx-auto">
-        <header class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-black italic tracking-tighter">HOST <span class="text-blue-600">DASHBOARD</span></h1>
-            <div id="lock-indicator" class="px-4 py-2 rounded-full text-[10px] font-black uppercase">System Status</div>
-        </header>
+<div class="max-w-5xl mx-auto">
+    <header class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-black italic tracking-tighter">HOST <span class="text-blue-600">DASHBOARD</span></h1>
+        <div id="lock-indicator" class="px-4 py-2 rounded-full text-[10px] font-black uppercase">System Status</div>
+    </header>
 
-        <nav class="flex gap-2 mb-8 bg-slate-200 p-1.5 rounded-2xl w-fit">
-            <button onclick="openTab(event, 'tab-guests')" class="tab-btn px-6 py-2.5 rounded-xl font-bold text-sm bg-white shadow-sm">GUESTS</button>
-            <button onclick="openTab(event, 'tab-chat')" class="tab-btn px-6 py-2.5 rounded-xl font-bold text-sm text-slate-500">MESSAGES</button>
-            <button onclick="openTab(event, 'tab-push')" class="tab-btn px-6 py-2.5 rounded-xl font-bold text-sm text-slate-500">PUSH ALERT</button>
-            <button onclick="openTab(event, 'tab-control')" class="tab-btn px-6 py-2.5 rounded-xl font-bold text-sm text-slate-500">HARDWARE</button>
-        </nav>
+    <nav class="flex gap-2 mb-8 bg-slate-200 p-1.5 rounded-2xl w-fit">
+        <button onclick="openTab(event, 'tab-guests')" class="tab-btn px-6 py-2.5 rounded-xl font-bold text-sm bg-white shadow-sm">GUESTS</button>
+        <button onclick="openTab(event, 'tab-chat')" class="tab-btn px-6 py-2.5 rounded-xl font-bold text-sm text-slate-500">MESSAGES</button>
+        <button onclick="openTab(event, 'tab-push')" class="tab-btn px-6 py-2.5 rounded-xl font-bold text-sm text-slate-500">PUSH ALERT</button>
+        <button onclick="openTab(event, 'tab-control')" class="tab-btn px-6 py-2.5 rounded-xl font-bold text-sm text-slate-500">HARDWARE</button>
+    </nav>
 
-        <main id="tab-guests" class="tab-content active space-y-6">
-            <section class="bg-white p-8 rounded-3xl border shadow-sm">
-                <h2 class="font-bold text-lg mb-4 uppercase tracking-widest">New Stay Registration</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <input type="text" id="ln" placeholder="Last Name" class="border p-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500">
-                    <input type="date" id="ci" class="border p-4 rounded-2xl">
-                    <input type="date" id="co" class="border p-4 rounded-2xl">
-                </div>
-                <button id="add-guest" class="mt-4 w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-lg">REGISTER & GENERATE PIN</button>
-            </section>
-            <div id="guest-list" class="space-y-4"></div>
-        </main>
-
-        <main id="tab-chat" class="tab-content">
-            <div class="bg-white rounded-3xl border flex flex-col h-[600px] shadow-sm">
-                <div id="admin-chat-list" class="flex-1 overflow-y-auto p-6 space-y-4"></div>
-                <div class="p-4 border-t flex gap-2">
-                    <input type="text" id="admin-msg" placeholder="Select a message to reply..." class="flex-1 p-4 bg-slate-50 rounded-2xl outline-none border">
-                    <button id="admin-send" class="bg-green-600 text-white px-8 rounded-2xl font-bold">REPLY</button>
-                </div>
+    <!-- GUESTS TAB -->
+    <main id="tab-guests" class="tab-content active space-y-6">
+        <section class="bg-white p-8 rounded-3xl border shadow-sm">
+            <h2 class="font-bold text-lg mb-4 uppercase tracking-widest">New Stay Registration</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input type="text" id="ln" placeholder="Last Name" class="border p-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="date" id="ci" class="border p-4 rounded-2xl">
+                <input type="date" id="co" class="border p-4 rounded-2xl">
             </div>
-        </main>
+            <button id="add-guest" class="mt-4 w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-lg">REGISTER & GENERATE PIN</button>
+        </section>
+        <div id="guest-list" class="space-y-4"></div>
+    </main>
 
-        <main id="tab-push" class="tab-content">
-            <div class="max-w-lg mx-auto bg-white p-10 rounded-3xl shadow-sm border text-center">
-                <h2 class="font-black text-2xl mb-2">PUSH ANNOUNCEMENT</h2>
-                <p class="text-slate-400 text-sm mb-6">This banner will appear on all tablets immediately.</p>
-                <textarea id="push-msg" placeholder="e.g. The pool is now open!" class="w-full border p-4 rounded-2xl h-32 mb-4 bg-slate-50"></textarea>
-                <button id="send-push" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black">ACTIVATE BANNER</button>
-                <button onclick="clearPush()" class="mt-4 text-red-500 text-xs font-bold uppercase underline">Clear Banner</button>
+    <!-- MESSAGES TAB -->
+    <main id="tab-chat" class="tab-content">
+        <div class="bg-white rounded-3xl border flex flex-col h-[600px] shadow-sm">
+            <div id="admin-chat-list" class="flex-1 overflow-y-auto p-6 space-y-4"></div>
+            <div class="p-4 border-t flex gap-2">
+                <input type="text" id="admin-msg" placeholder="Select a message to reply..." class="flex-1 p-4 bg-slate-50 rounded-2xl outline-none border">
+                <button id="admin-send" class="bg-green-600 text-white px-8 rounded-2xl font-bold">REPLY</button>
             </div>
-        </main>
+        </div>
+    </main>
 
-        <main id="tab-control" class="tab-content">
-            <div class="max-w-lg mx-auto bg-slate-900 text-white p-10 rounded-[3rem] shadow-2xl text-center">
-                <h2 class="text-3xl font-black mb-4 tracking-tighter">REMOTE LOCKDOWN</h2>
-                <p class="text-slate-400 mb-8">Locking prevents any guest interaction with the tablets.</p>
-                <div class="grid grid-cols-2 gap-4">
-                    <button onclick="setLock(true)" class="bg-red-600 py-6 rounded-3xl font-black text-lg shadow-xl">LOCK ALL</button>
-                    <button onclick="setLock(false)" class="bg-white/10 py-6 rounded-3xl font-black text-lg hover:bg-white/20">UNLOCK</button>
-                </div>
+    <!-- PUSH ALERT TAB -->
+    <main id="tab-push" class="tab-content">
+        <div class="max-w-lg mx-auto bg-white p-10 rounded-3xl shadow-sm border text-center">
+            <h2 class="font-black text-2xl mb-2">PUSH ANNOUNCEMENT</h2>
+            <p class="text-slate-400 text-sm mb-6">This banner will appear on all tablets immediately.</p>
+            <textarea id="push-msg" placeholder="e.g. The pool is now open!" class="w-full border p-4 rounded-2xl h-32 mb-4 bg-slate-50"></textarea>
+            <button id="send-push" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black">ACTIVATE BANNER</button>
+            <button onclick="clearPush()" class="mt-4 text-red-500 text-xs font-bold uppercase underline">Clear Banner</button>
+        </div>
+    </main>
+
+    <!-- HARDWARE CONTROL TAB -->
+    <main id="tab-control" class="tab-content">
+        <div class="max-w-lg mx-auto bg-slate-900 text-white p-10 rounded-[3rem] shadow-2xl text-center">
+            <h2 class="text-3xl font-black mb-4 tracking-tighter">REMOTE LOCKDOWN</h2>
+            <p class="text-slate-400 mb-8">Locking prevents any guest interaction with the tablets.</p>
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="setLock(true)" class="bg-red-600 py-6 rounded-3xl font-black text-lg shadow-xl">LOCK ALL</button>
+                <button onclick="setLock(false)" class="bg-white/10 py-6 rounded-3xl font-black text-lg hover:bg-white/20">UNLOCK</button>
             </div>
-        </main>
-    </div>
+        </div>
+    </main>
+</div>
 
 <script>
 const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
@@ -75,42 +79,44 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let activeReplyFamilyId = null;
 
-function openTab(evt, name) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('bg-white','shadow-sm','text-slate-900'); b.classList.add('text-slate-500'); });
+function openTab(evt, name){
+    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>{
+        b.classList.remove('bg-white','shadow-sm','text-slate-900'); 
+        b.classList.add('text-slate-500');
+    });
     document.getElementById(name).classList.add('active');
     evt.currentTarget.classList.add('bg-white','shadow-sm','text-slate-900');
     evt.currentTarget.classList.remove('text-slate-500');
 }
 
 // DATE ADJUSTER HELPERS
-function modDate(dateStr, days) {
+function modDate(dateStr, days){
     const d = new Date(dateStr);
-    d.setDate(d.getDate() + days);
+    d.setDate(d.getDate()+days);
     return d.toISOString().split('T')[0];
 }
 
-async function updateGuestDate(id, field, val) {
+async function updateGuestDate(id, field, val){
     await supabaseClient.from('families').update({ [field]: val }).eq('id', id);
     loadGuests();
 }
 
 // GUEST MANAGEMENT
-document.getElementById('add-guest').onclick = async () => {
+document.getElementById('add-guest').onclick = async ()=>{
     const last = document.getElementById('ln').value;
     const ci = document.getElementById('ci').value;
     const co = document.getElementById('co').value;
-    const pin = Math.floor(100000 + Math.random() * 900000).toString();
+    const pin = Math.floor(100000 + Math.random()*900000).toString();
     if(!last || !ci || !co) return alert("Fill all fields");
-
-    await supabaseClient.from('families').insert({ last_name: last, check_in_date: ci, check_out_date: co, access_code: pin });
-    document.getElementById('ln').value = '';
+    await supabaseClient.from('families').insert({ last_name:last, check_in_date:ci, check_out_date:co, access_code:pin });
+    document.getElementById('ln').value='';
     loadGuests();
 };
 
-async function loadGuests() {
-    const { data } = await supabaseClient.from('families').select('*').order('created_at', {ascending:false});
-    document.getElementById('guest-list').innerHTML = data?.map(f => `
+async function loadGuests(){
+    const { data } = await supabaseClient.from('families').select('*').order('created_at',{ascending:false});
+    document.getElementById('guest-list').innerHTML = data?.map(f=>`
         <div class="bg-white p-6 rounded-3xl border flex flex-wrap justify-between items-center shadow-sm">
             <div>
                 <p class="font-black text-xl">${f.last_name} Family</p>
@@ -139,64 +145,70 @@ async function loadGuests() {
     `).join('') || '';
 }
 
-window.delGuest = async (id) => {
-    if(confirm("Permanently delete stay?")) {
-        await supabaseClient.from('families').delete().eq('id', id);
+window.delGuest = async (id)=>{
+    if(confirm("Permanently delete stay?")){
+        await supabaseClient.from('families').delete().eq('id',id);
         loadGuests();
     }
 }
 
 // CHAT MANAGEMENT
-async function loadAdminChat() {
+async function loadAdminChat(){
     const { data } = await supabaseClient.from('messages').select('*, families(last_name)').order('created_at',{ascending:true});
-    document.getElementById('admin-chat-list').innerHTML = data?.map(m => `
-        <div onclick="prepReply('${m.family_id}', '${m.families?.last_name}')" class="p-4 rounded-2xl cursor-pointer max-w-[80%] ${m.sent_by==='host'?'bg-blue-600 text-white ml-auto shadow-md':'bg-slate-100 mr-auto border'}">
+    document.getElementById('admin-chat-list').innerHTML = data?.map(m=>`
+        <div onclick="prepReply('${m.family_id}','${m.families?.last_name}')" class="p-4 rounded-2xl cursor-pointer max-w-[80%] ${m.sent_by==='host'?'bg-blue-600 text-white ml-auto shadow-md':'bg-slate-100 mr-auto border'}">
             <p class="text-[9px] font-bold uppercase opacity-60 mb-1">${m.sent_by==='host'?'YOU':m.families?.last_name}</p>
             <p class="text-sm font-medium">${m.message}</p>
         </div>
     `).join('') || '';
 }
 
-function prepReply(id, name) {
+function prepReply(id,name){
     activeReplyFamilyId = id;
-    document.getElementById('admin-msg').placeholder = `Reply to ${name}...`;
+    document.getElementById('admin-msg').placeholder=`Reply to ${name}...`;
     document.getElementById('admin-msg').focus();
 }
 
-document.getElementById('admin-send').onclick = async () => {
-    const input = document.getElementById('admin-msg');
+document.getElementById('admin-send').onclick=async ()=>{
+    const input=document.getElementById('admin-msg');
     if(!activeReplyFamilyId || !input.value.trim()) return;
-    await supabaseClient.from('messages').insert({ family_id: activeReplyFamilyId, message: input.value, sent_by: 'host' });
-    input.value = '';
+    await supabaseClient.from('messages').insert({family_id:activeReplyFamilyId,message:input.value,sent_by:'host'});
+    input.value='';
     loadAdminChat();
-};
-
-// ANNOUNCEMENTS
-document.getElementById('send_push').onclick = async () => {
-    const msg = document.getElementById('push-msg').value;
-    const expiry = new Date(); expiry.setMinutes(expiry.getMinutes() + 30);
-    await supabaseClient.from('announcements').delete().neq('message', '0'); // Clear old
-    await supabaseClient.from('announcements').insert({ message: msg, expires_at: expiry.toISOString() });
-    alert("Banner Pushed!");
-};
-window.clearPush = async () => { await supabaseClient.from('announcements').delete().neq('message', '0'); alert("Banner Cleared"); };
-
-// HARDWARE CONTROL
-window.setLock = async (status) => {
-    await supabaseClient.from('controls').upsert({ id:1, is_locked: status });
-    checkIndicator();
-};
-async function checkIndicator() {
-    const { data } = await supabaseClient.from('controls').select('is_locked').eq('id',1).maybeSingle();
-    const ind = document.getElementById('lock-indicator');
-    ind.innerText = data?.is_locked ? "SYSTEM LOCKED" : "SYSTEM ONLINE";
-    ind.className = `px-4 py-2 rounded-full text-[10px] font-black uppercase ${data?.is_locked ? 'bg-red-100 text-red-600':'bg-green-100 text-green-600'}`;
 }
 
+// ANNOUNCEMENTS
+document.getElementById('send-push').onclick=async ()=>{
+    const msg=document.getElementById('push-msg').value;
+    if(!msg.trim()) return alert("Enter a message");
+    const expiry=new Date(); expiry.setMinutes(expiry.getMinutes()+30);
+    await supabaseClient.from('announcements').delete().neq('message','0'); // clear old
+    await supabaseClient.from('announcements').insert({message:msg,expires_at:expiry.toISOString()});
+    alert("Banner Pushed!");
+};
+
+window.clearPush=async ()=>{
+    await supabaseClient.from('announcements').delete().neq('message','0');
+    alert("Banner Cleared");
+};
+
+// HARDWARE CONTROL
+window.setLock=async (status)=>{
+    await supabaseClient.from('controls').upsert({id:1,is_locked:status});
+    checkIndicator();
+};
+async function checkIndicator(){
+    const { data } = await supabaseClient.from('controls').select('is_locked').eq('id',1).maybeSingle();
+    const ind=document.getElementById('lock-indicator');
+    ind.innerText=data?.is_locked?"SYSTEM LOCKED":"SYSTEM ONLINE";
+    ind.className=`px-4 py-2 rounded-full text-[10px] font-black uppercase ${data?.is_locked?'bg-red-100 text-red-600':'bg-green-100 text-green-600'}`;
+}
+
+// INITIAL LOAD
 loadGuests();
 loadAdminChat();
 checkIndicator();
-setInterval(loadAdminChat, 5000);
+setInterval(loadAdminChat,5000);
 </script>
 </body>
 </html>
