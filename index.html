@@ -31,95 +31,96 @@
 </div>
 
 <script>
-const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+document.addEventListener('DOMContentLoaded', async function() {
+  const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
+  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  let family = null;
 
-let family = null;
-
-// Display local Southern California time
-function updateTime(){
-  const now = new Date();
-  document.getElementById('time').innerText = now.toLocaleTimeString('en-US', {timeZone:'America/Los_Angeles'});
-}
-setInterval(updateTime,1000);
-updateTime();
-
-// Prompt last name on first visit
-async function verifyFamily(){
-  const lastName = prompt("Enter your last name:");
-  const { data, error } = await supabase
-      .from('families')
-      .select('*')
-      .eq('last_name', lastName)
-      .maybeSingle();
-
-  if(!data){ 
-    document.getElementById('welcome').innerText = "No guests currently staying.";
-    return;
+  // Display local Southern California time
+  function updateTime(){
+    const now = new Date();
+    document.getElementById('time').innerText = now.toLocaleTimeString('en-US', {timeZone:'America/Los_Angeles'});
   }
-  
-  family = data;
-  
-  const isCorrect = confirm(`Welcome, ${family.last_name}s!\nIs this correct?`);
-  if(!isCorrect){
-    document.body.innerHTML = "<h1>Tablet locked. Please ask host.</h1>";
-    return;
-  }
-  
-  loadDashboard();
-}
+  setInterval(updateTime,1000);
+  updateTime();
 
-// Load guest dashboard
-async function loadDashboard(){
-  document.getElementById('welcome').innerText = `Welcome, ${family.last_name}s!`;
+  // Prompt last name on first visit
+  async function verifyFamily(){
+    const lastName = prompt("Enter your last name:");
+    const { data } = await supabase
+        .from('families')
+        .select('*')
+        .eq('last_name', lastName)
+        .maybeSingle();
 
-  // Calendar
-  const calendarDiv = document.getElementById('calendar');
-  calendarDiv.innerHTML = '';
-  const start = new Date(family.check_in_date);
-  const end = new Date(family.check_out_date);
-  const today = new Date();
-  let cur = new Date(start);
-  while(cur <= end){
-    const dot = document.createElement('div');
-    dot.classList.add('dot');
-    if(cur < new Date(today.setHours(0,0,0,0))) dot.classList.add('past');
-    else if(cur.toDateString() === new Date().toDateString()) dot.classList.add('current');
-    else dot.classList.add('upcoming');
-    calendarDiv.appendChild(dot);
-    cur.setDate(cur.getDate()+1);
+    if(!data){ 
+      document.getElementById('welcome').innerText = "No guests currently staying.";
+      return;
+    }
+
+    family = data;
+    
+    const isCorrect = confirm(`Welcome, ${family.last_name}s!\nIs this correct?`);
+    if(!isCorrect){
+      document.body.innerHTML = "<h1>Tablet locked. Please ask host.</h1>";
+      return;
+    }
+
+    loadDashboard();
   }
 
-  // Days left
-  const daysLeft = Math.ceil((new Date(family.check_out_date)-new Date())/(1000*60*60*24));
-  document.getElementById('days-left').innerText = `You have ${daysLeft} days left at the beach house.`;
+  // Load guest dashboard
+  async function loadDashboard(){
+    document.getElementById('welcome').innerText = `Welcome, ${family.last_name}s!`;
 
-  // Listen to announcements
-  supabase.from('announcements').on('INSERT', payload=>{
-    const ann = document.getElementById('announcement');
-    ann.innerText = payload.new.message;
-    ann.style.display='block';
-  }).subscribe();
+    // Calendar
+    const calendarDiv = document.getElementById('calendar');
+    calendarDiv.innerHTML = '';
+    const start = new Date(family.check_in_date);
+    const end = new Date(family.check_out_date);
+    const today = new Date();
+    let cur = new Date(start);
+    while(cur <= end){
+      const dot = document.createElement('div');
+      dot.classList.add('dot');
+      if(cur < new Date(today.setHours(0,0,0,0))) dot.classList.add('past');
+      else if(cur.toDateString() === new Date().toDateString()) dot.classList.add('current');
+      else dot.classList.add('upcoming');
+      calendarDiv.appendChild(dot);
+      cur.setDate(cur.getDate()+1);
+    }
 
-  // Load and listen to messages
-  const chatDiv = document.getElementById('chat');
-  const { data:msgs } = await supabase.from('messages').select('*').eq('family_id', family.id);
-  msgs.forEach(m=>chatDiv.innerHTML+=`<div><b>${m.sent_by}:</b> ${m.message}</div>`);
+    // Days left
+    const daysLeft = Math.ceil((new Date(family.check_out_date)-new Date())/(1000*60*60*24));
+    document.getElementById('days-left').innerText = `You have ${daysLeft} days left at the beach house.`;
 
-  supabase.from(`messages:family_id=eq.${family.id}`).on('INSERT', payload=>{
-    chatDiv.innerHTML+=`<div><b>${payload.new.sent_by}:</b> ${payload.new.message}</div>`;
-  }).subscribe();
+    // Listen to announcements
+    supabase.from('announcements').on('INSERT', payload=>{
+      const ann = document.getElementById('announcement');
+      ann.innerText = payload.new.message;
+      ann.style.display='block';
+    }).subscribe();
 
-  document.getElementById('send-msg').onclick=async()=>{
-    const msg = document.getElementById('msg-input').value;
-    if(!msg) return;
-    await supabase.from('messages').insert({family_id: family.id, message: msg, sent_by:'guest'});
-    document.getElementById('msg-input').value='';
+    // Load and listen to messages
+    const chatDiv = document.getElementById('chat');
+    const { data:msgs } = await supabase.from('messages').select('*').eq('family_id', family.id);
+    msgs.forEach(m=>chatDiv.innerHTML+=`<div><b>${m.sent_by}:</b> ${m.message}</div>`);
+
+    supabase.from(`messages:family_id=eq.${family.id}`).on('INSERT', payload=>{
+      chatDiv.innerHTML+=`<div><b>${payload.new.sent_by}:</b> ${payload.new.message}</div>`;
+    }).subscribe();
+
+    document.getElementById('send-msg').onclick=async()=>{
+      const msg = document.getElementById('msg-input').value;
+      if(!msg) return;
+      await supabase.from('messages').insert({family_id: family.id, message: msg, sent_by:'guest'});
+      document.getElementById('msg-input').value='';
+    }
   }
-}
 
-verifyFamily();
+  verifyFamily();
+});
 </script>
 </body>
 </html>
