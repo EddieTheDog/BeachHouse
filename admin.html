@@ -1,83 +1,171 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Beach House Admin</title>
-<style>
-  body{ font-family:sans-serif; padding:20px;}
-  input, button{margin:5px;}
-  .family{border:1px solid #ccc; padding:5px; margin:5px;}
-</style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beach House Admin Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab-btn.active { border-bottom: 2px solid #2563eb; color: #2563eb; }
+    </style>
 </head>
-<body>
-<h1>Admin Dashboard</h1>
+<body class="bg-gray-50 text-gray-800">
 
-<h2>Create / Edit Family</h2>
-<input type="text" id="last_name" placeholder="Last Name">
-<input type="date" id="check_in">
-<input type="date" id="check_out">
-<button id="create">Create / Update</button>
+<div class="max-w-4xl mx-auto p-6">
+    <header class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Beach House Admin</h1>
+        <p class="text-gray-500">Manage guests, announcements, and device locks.</p>
+    </header>
 
-<h2>Actions</h2>
-<button id="lock">Lock All Tablets</button>
-<button id="unlock">Unlock All Tablets</button>
-<input type="text" id="announcement_msg" placeholder="Announcement">
-<button id="send_announcement">Send Announcement</button>
+    <nav class="flex border-b border-gray-200 mb-6">
+        <button class="tab-btn px-6 py-2 font-medium active" onclick="openTab(event, 'tab-families')">Families</button>
+        <button class="tab-btn px-6 py-2 font-medium" onclick="openTab(event, 'tab-actions')">Global Actions</button>
+    </nav>
 
-<h2>Families</h2>
-<div id="family-list"></div>
+    <div id="tab-families" class="tab-content active">
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Create / Edit Family</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input type="text" id="last_name" placeholder="Last Name" class="border p-2 rounded">
+                <div class="flex flex-col">
+                    <label class="text-xs text-gray-400">Check-in</label>
+                    <input type="date" id="check_in" class="border p-2 rounded">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-xs text-gray-400">Check-out</label>
+                    <input type="date" id="check_out" class="border p-2 rounded">
+                </div>
+            </div>
+            <button id="create" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Save Guest</button>
+        </div>
+
+        <h2 class="text-xl font-semibold mb-4">Current Families</h2>
+        <div id="family-list" class="grid gap-4">
+            <p class="text-gray-400">Loading families...</p>
+        </div>
+    </div>
+
+    <div id="tab-actions" class="tab-content">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <h3 class="font-bold mb-4">Device Management</h3>
+                <div class="flex space-x-2">
+                    <button id="lock" class="bg-red-500 text-white px-4 py-2 rounded flex-1">Lock All</button>
+                    <button id="unlock" class="bg-green-500 text-white px-4 py-2 rounded flex-1">Unlock All</button>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <h3 class="font-bold mb-4">Send Announcement</h3>
+                <textarea id="announcement_msg" placeholder="Type message here..." class="w-full border p-2 rounded mb-2"></textarea>
+                <button id="send_announcement" class="w-full bg-indigo-600 text-white px-4 py-2 rounded">Broadcast</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
+// --- CONFIGURATION ---
+const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc'; // Ensure this is your public key
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// --- TAB LOGIC ---
+function openTab(evt, tabName) {
+    const contents = document.getElementsByClassName("tab-content");
+    for (let content of contents) content.classList.remove("active");
+    
+    const buttons = document.getElementsByClassName("tab-btn");
+    for (let btn of buttons) btn.classList.remove("active");
+
+    document.getElementById(tabName).classList.add("active");
+    evt.currentTarget.classList.add("active");
+}
+
+// --- DATA LOGIC ---
 document.addEventListener('DOMContentLoaded', async function() {
-  const SUPABASE_URL = 'https://ofnlpqfscyecatetnuqi.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_jjdmHkgGrbjqYwY14kS9ng_Ivuq-Pjc';
-  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const listDiv = document.getElementById('family-list');
 
-  const listDiv = document.getElementById('family-list');
+    async function loadFamilies() {
+        const { data, error } = await supabaseClient
+            .from('families')
+            .select('*')
+            .order('check_in_date', { ascending: true });
 
-  async function loadFamilies(){
-    const { data } = await supabaseClient.from('families').select('*');
-    listDiv.innerHTML='';
-    if(!data || data.length===0){
-      listDiv.innerHTML="<p>No families currently created.</p>";
-      return;
+        if (error) {
+            console.error(error);
+            return;
+        }
+
+        listDiv.innerHTML = '';
+        if (!data || data.length === 0) {
+            listDiv.innerHTML = "<div class='bg-gray-100 p-4 rounded text-center text-gray-500'>No active reservations.</div>";
+            return;
+        }
+
+        data.forEach(f => {
+            const card = document.createElement('div');
+            card.className = "bg-white p-4 rounded shadow-sm border border-gray-200 flex justify-between items-center";
+            card.innerHTML = `
+                <div>
+                    <div class="font-bold text-lg">${f.last_name} Family</div>
+                    <div class="text-sm text-gray-500">${f.check_in_date} to ${f.check_out_date}</div>
+                </div>
+                <button onclick="checkout('${f.id}')" class="text-red-600 border border-red-600 px-3 py-1 rounded hover:bg-red-50 text-sm">Check Out</button>
+            `;
+            listDiv.appendChild(card);
+        });
     }
-    data.forEach(f=>{
-      const div = document.createElement('div');
-      div.classList.add('family');
-      div.innerHTML = `<b>${f.last_name}s</b> | ${f.check_in_date} → ${f.check_out_date} 
-        <button onclick="checkout('${f.id}')">Check Out</button>`;
-      listDiv.appendChild(div);
-    });
-  }
 
-  window.checkout = async function(id){
-    await supabaseClient.from('families').update({checked_in:false}).eq('id',id);
+    // Global checkout function
+    window.checkout = async function(id) {
+        if (!confirm("Are you sure you want to check out this family?")) return;
+        const { error } = await supabaseClient.from('families').delete().eq('id', id);
+        if (!error) loadFamilies();
+    };
+
+    // Create Guest
+    document.getElementById('create').onclick = async () => {
+        const ln = document.getElementById('last_name').value;
+        const ci = document.getElementById('check_in').value;
+        const co = document.getElementById('check_out').value;
+
+        if (!ln || !ci || !co) { alert("Please fill in all guest details."); return; }
+
+        const { error } = await supabaseClient.from('families').upsert({ 
+            last_name: ln, 
+            check_in_date: ci, 
+            check_out_date: co 
+        });
+
+        if (error) {
+            alert("Error saving: " + error.message);
+        } else {
+            document.getElementById('last_name').value = '';
+            loadFamilies();
+        }
+    };
+
+    // Announcement Logic
+    document.getElementById('send_announcement').onclick = async () => {
+        const msg = document.getElementById('announcement_msg').value.trim();
+        if (!msg) return;
+        
+        const { error } = await supabaseClient.from('announcements').insert({ message: msg });
+        if (!error) {
+            document.getElementById('announcement_msg').value = '';
+            alert("Announcement broadcasted successfully!");
+        }
+    };
+
+    // Placeholder actions
+    document.getElementById('lock').onclick = () => alert("Instruction sent to lock all tablets.");
+    document.getElementById('unlock').onclick = () => alert("Instruction sent to unlock all tablets.");
+
     loadFamilies();
-  }
-
-  document.getElementById('create').onclick = async ()=>{
-    const ln = document.getElementById('last_name').value;
-    const ci = document.getElementById('check_in').value;
-    const co = document.getElementById('check_out').value;
-    if(!ln || !ci || !co){ alert("Fill all fields"); return; }
-    await supabaseClient.from('families').upsert({last_name: ln, check_in_date: ci, check_out_date: co});
-    loadFamilies();
-  }
-
-  document.getElementById('send_announcement').onclick = async ()=>{
-    const msg = document.getElementById('announcement_msg').value.trim();
-    if(!msg) return;
-    await supabaseClient.from('announcements').insert({message: msg});
-    document.getElementById('announcement_msg').value='';
-    alert("Announcement sent!");
-  }
-
-  document.getElementById('lock').onclick = ()=> alert("Tablets locked (placeholder)");
-  document.getElementById('unlock').onclick = ()=> alert("Tablets unlocked (placeholder)");
-
-  loadFamilies();
 });
 </script>
 </body>
